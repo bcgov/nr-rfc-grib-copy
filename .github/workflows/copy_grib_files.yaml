@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - "main"
-
+  schedule:
+    - cron: '1 9 * * *'
+  workflow_dispatch:
+            
 jobs:
   build:
     defaults:
