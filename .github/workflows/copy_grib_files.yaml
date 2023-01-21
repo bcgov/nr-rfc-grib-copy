@@ -8,8 +8,30 @@ on:
       - "server/**"
 
 jobs:
-  # auth_function_ci:
-  #   uses: ./.github/workflows/reusable_auth_function_ci.yml
+  build:
+    defaults:
+      run:
+        shell: bash
+    name: 'download dependencies'
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      id: checkout
+      with:
+       fetch-depth: 0
 
-  # api_tests:
-  #   uses: ./.github/workflows/reuseable_api_unittests.yml
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11' 
+
+    - id: install_dependencies
+      name: install python dependencies
+      shell: bash
+      run: |
+        pip install -r requirements.txt
+
+    - id: download_grib
+      name: download grib files
+      shell: bash
+      run: | 
+        python src/main.py
