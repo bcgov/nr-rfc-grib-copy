@@ -27,15 +27,21 @@ jobs:
       shell: bash
       run: |
         pip install -r requirements.txt
-
+  run:
+    defaults:
+      run:
+        shell: bash
+    name: 'get grib files'
+    runs-on: ubuntu-20.04
+    environment: RUN
+    env:
+      OBJ_STORE_BUCKET=${{ secrets.OBJ_STORE_BUCKET }}
+      OBJ_STORE_SECRET=${{ secrets.OBJ_STORE_SECRET }}
+      OBJ_STORE_USER=${{ secrets.OBJ_STORE_USER }}
+      OBJ_STORE_HOST=${{ secrets.OBJ_STORE_HOST }}
+    steps:
     - id: download_grib
       name: download grib files
       shell: bash
-      environment: RUN
-      env:
-        OBJ_STORE_BUCKET=${{ secrets.OBJ_STORE_BUCKET }}
-        OBJ_STORE_SECRET=${{ secrets.OBJ_STORE_SECRET }}
-        OBJ_STORE_USER=${{ secrets.OBJ_STORE_USER }}
-        OBJ_STORE_HOST=${{ secrets.OBJ_STORE_HOST }}
       run: | 
         python src/main.py
