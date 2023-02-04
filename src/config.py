@@ -24,5 +24,4 @@ for param_name in params2populate:
         raise required_parameter_exception(param_name, param_value)
     setattr(thismodule, param_name, param_value)
 
-
-
+WGRIB_UTILITY = os.path.realpath(os.path.join(os.path.dirname(__file__), 'wgrib2', 'wgrib2'))

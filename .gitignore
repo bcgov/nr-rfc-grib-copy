@@ -3,3 +3,9 @@
 __pycache__
 venv/
 src/oldWget.bat
+old/
+src/wgrib2/grib2
+wgrib2.tgz
+src/wgrib2/wgrib2
+tmp/
+junk*
