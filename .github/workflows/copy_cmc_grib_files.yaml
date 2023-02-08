@@ -3,7 +3,7 @@ name: Download CANSIP Grib2 Files
 on: 
   push:
     branches:
-      - "main"
+      - "feat/daily-grib2-download"
   schedule:
     # run at 5:31 am 
     - cron: '31 5 * * *'
