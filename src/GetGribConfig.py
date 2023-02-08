@@ -412,31 +412,3 @@ if __name__ == "__main__":
     fstring = gribtest4.url_template.format(model_number=gribtest4.model_number, iterator="219")
     print(fstring)
     tz = pytz.timezone("America/Vancouver")
-
-    import inspect
-    import sys
-    clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    print(clsmembers)
-    for classmem in clsmembers:
-        print(inspect.currentframe())
-        var = inspect.getmodule('GetGribConfig')
-        print(var)
-        klass = getattr(__name__, classmem)
-        Foo = classmem()
-        print([cls.__name__ for cls in Foo.__subclasses__()])
-
-"""
-# all the file patterns downloaded, and the extract type
-CMC_glb_PRATE_SFC_0_latlon.15x.15_%YYYY%%MT%%DD%%GH%_P%%A.grib2     P
-CMC_reg_TMP_TGL_2_ps10km_%YYYY%%MT%%DD%%RH%_P%%A.grib2              T
-CMC_glb_PRATE_SFC_0_latlon.15x.15_%YYYY%%MT%%DD%%GH%_P%%A.grib2     P
-CMC_glb_TMP_TGL_2_latlon.15x.15_%YYYY%%MT%%DD%%GH%_P%%A.grib2       T
-
-# for each of the above run wgrib2 on the file with a set of parameters
-P1.txt runs the extract params 1 on files with P extract type
-P2.txt runs the extract params 2 on files with P extract type
-...
-T1.txt runs the extract params 1 on files with type T
-...
-
-"""
