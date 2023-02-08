@@ -1,12 +1,15 @@
-import GetGribConfig
-import logging
 import datetime
 import inspect
+import logging
 import os
-import requests
-import sys
-import config
 import subprocess
+import sys
+
+import requests
+
+import config
+import GetGribConfig
+import ObjectStore
 
 LOGGER = logging.getLogger(__name__)
 
@@ -172,6 +175,27 @@ class CoalateGribOutput:
             outfile = os.path.join(output_directory, f'{key}.txt')
             with open(outfile, 'w') as fh:
                 fh.write(self.grib_outputs[key])
+
+class CopyCMC2ObjectStorage:
+    def __init__(self):
+        self.objstor = ObjectStore.ObjectStoreUtil()
+        self.grib_confs = GetGribConfig.GribConfigCollection()
+
+    def copy_to_ostore(self, src_folder, ostore_folder):
+        # iterate over the various configs... 
+        # copy tmp/gribs/<date> to ostore 
+        src_files = os.listdir(src_folder)
+
+        ostore_objects = self.objstor.listObjects(ostore_folder, recursive=True, returnFileNamesOnly=True)
+        ostore_objects = [os.path.basename(ostore_file) for ostore_file in ostore_objects]
+        
+        LOGGER.debug(f"found {len(ostore_objects)} in the ostore folder: {ostore_folder}")
+        for src_file in src_files:
+            src_file_path = os.path.join(src_folder, src_file)
+            ostore_file_path = os.path.join(ostore_folder, src_file)
+            if src_file not in ostore_objects:
+                LOGGER.debug(f"creating ostore folder: {ostore_file_path}")
+                self.objstor.putObject(ostore_file_path, src_file_path)
 
 if __name__ == '__main__':
     dest_folder = 'tmp'

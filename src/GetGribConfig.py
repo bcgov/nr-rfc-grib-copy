@@ -2,53 +2,57 @@
 
 https://spire.com/tutorial/spire-weather-tutorial-intro-to-processing-grib2-data-with-python/
 """
-import pytz
 import abc
 import datetime
+import inspect
+import logging
+import sys
 
+import pytz
+
+LOGGER = logging.getLogger(__name__)
 
 class GribConfig(metaclass=abc.ABCMeta):
-    """Using this class to ensure that subclasses of it posses the expected 
+    """Using this class to ensure that subclasses of it posses the expected
     properties
 
     :param metaclass: declaring as an Abstract base class, defaults to abc.ABCMeta
     """
-    
+
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def model_number(self):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def url_template(self):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def date_str_format(self):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def iteratorlist(self):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def file_template(self):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def timezone(self):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod    
+    @abc.abstractmethod
     def extract_code(self):
         raise NotImplementedError
-
 
     @property
     def datestr(self):
@@ -58,7 +62,7 @@ class GribConfig(metaclass=abc.ABCMeta):
 
     @property
     def extract_params_object(self):
-        # TODO: replace this logic with a method that returns the params for the 
+        # TODO: replace this logic with a method that returns the params for the
         #       input extract_name
         extract_params = WGribExtractParams()
         return extract_params
@@ -88,8 +92,8 @@ class GribConfig(metaclass=abc.ABCMeta):
     #     wgrib_params_all = [wgrib_params1, wgrib_params2, wgrib_params3, wgrib_params4]
     #     return wgrib_params_all
 
-class WGribExtractParams:
 
+class WGribExtractParams:
     def __init__(self):
         self.wgrib_params_dict = {}
         self.define_params()
@@ -117,15 +121,16 @@ class WGribExtractParams:
         wgrib_params4 = "-lon 239.518 50.673 -lon 243.254 49.436 -lon 238.642 49.655 -lon 239.379 49.948 -lon 239.543 49.433 -lon 244.37 49.459 -lon 235.067 49.377 -lon 236.677 53.865 -lon 237.935 52.91 -lon 238.163 49.723 -lon 238.238 53.262 -lon 240.706 52.122 -lon 235.298 49.437 -lon 240.007 49.868 -lon 234.243 54.259 -lon 240.162 50.888 -lon 235.561 53.401 -lon 239.142 53.576 -lon 236.125 49.048 -lon 244.458 49.188 -lon 237.68 51.403 -lon 239.905 51.629 -lon 239.61 51.724 -lon 244.152 49.667 -lon 242.042 50.765 -lon 241.577 50.602 -lon 237.502 50.522 -lon 243.033 49.367 -lon 229.981 58.426 -lon 243.617 49.784 -lon 234.221 53.502 -lon 241.422 49.433 -lon 242.12 50.383 -lon 240.52 50.207 -lon 237.311 50.911 -lon 238.362 49.104 -lon 237.426 58.841 -lon 235.739 54.394 -lon 237.751 51.177 -lon 233.052 54.801 -lon 238.258 52.47 -lon 239.712 50.27 -lon 243.836 49.125 -lon 242.936 50.366 -lon 241.513 51.669 -lon 241.584 49.031 -lon 234.124 53.945 -lon 237.12 50.796 -lon 233.41 52.387 -lon 240.887 51.523 -lon 237.404 53.411 -lon 240.287 53.345 -lon 235.223 53.936 -lon 227.884 53.253 -lon 238.603 52.33 -lon 238.126 52.05 -lon 244.775 49.047 -lon 239.164 50.615 -lon 238.487 52.615 -lon 238.112 50.672 -lon 238.838 51.507 -lon 241.227 50.352 -lon 236.907 55.322 -lon 239.588 51.211 -lon 239.847 53.295 -lon 240.585 49.148 -lon 238.642 50.792 -lon 238.283 51.375 -lon 239.254 50.087 -lon 235.863 48.823 -lon 233.072 53.942 -lon 237.979 49.902 -lon 242.006 49.254 -lon 236.404 52.958 -lon 242.213 49.502 -lon 233.793 55.135 -lon 236.246 54.155 -lon 233.611 54.019 -lon 239.326 50.504 -lon 233.483 53.987 -lon 237.271 50.306 -lon 242.586 49.051 -lon 240.447 49.518 -lon 232.674 54.684 -lon 238 51.817 -lon 243.145 49.906 -lon 234.706 50.027 -lon 241.783 51.06 -lon 237.496 51.959 -lon 241.063 49.052 -lon 243.207 50.613 -lon 240.765 50.685 -lon 236.526 48.774 -lon 238.348 54.17 -lon 241.085 51.274 -lon 240.997 50.863 -lon 233.883 57.852 -lon 238.448 50.439 -lon 242.552 49.497 -lon 239.133 50.924 -lon 238.345 50.351 -lon 242.239 51.751 -lon 235.395 51.907 -lon 242.573 50.605 -lon 236.435 49.428 -lon 234.869 50.271 -lon 236.613 49.586 -lon 235.385 50.104 -lon 240.37 50.803 -lon 237.427 49.264 -lon 240.685 52.788 -lon 240.701 52.87 -lon 235.991 54.056 -lon 239.756 52.343 -lon 239.35 51.67"
 
         self.wgrib_params_dict = {
-            'P1': wgrib_params1,
-            'T1': wgrib_params1,
-            'P2': wgrib_params2,
-            'T2': wgrib_params2,
-            'P3': wgrib_params3,
-            'T3': wgrib_params3,
-            'P4': wgrib_params4,
-            'T4': wgrib_params4
+            "P1": wgrib_params1,
+            "T1": wgrib_params1,
+            "P2": wgrib_params2,
+            "T2": wgrib_params2,
+            "P3": wgrib_params3,
+            "T3": wgrib_params3,
+            "P4": wgrib_params4,
+            "T4": wgrib_params4,
         }
+
     def get_wgrib_params(self, extract_code):
         """given a code like 'P' or 'T' returns a dictionary with only parameters
         for that type
@@ -144,82 +149,259 @@ class WGribExtractParams:
             raise InvalidExtractCodeError(extract_code)
         return extract_dict
 
+
 class InvalidExtractCodeError(Exception):
     def __init__(self, extract_code):
         self.message = (
-            f"requested an extract code: {extract_code} with no corresponding " +
-            "values" )
+            f"requested an extract code: {extract_code} with no corresponding " + "values"
+        )
         super().__init__(self.message)
 
+
 class GribRegional_1(GribConfig):
+    model_number = "06"
+    extract_code = "P"
 
-    model_number = '06'
-    extract_code = 'P' 
-
-    url_template = 'http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/06/{iterator}'
-    date_str_format = '%Y%m%d'
+    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/06/{iterator}"
+    date_str_format = "%Y%m%d"
     iteratorlist = [
-        '003', '006', '009', '012', '015', '018', '021', '024', '027', '030', 
-        '033', '036', '039', '042', '045', '048', '051', '054']
-    
-    file_template = 'CMC_reg_PRATE_SFC_0_ps10km_{datestr}{model_number}_P{iterator}.grib2'
-    #timezone = pytz.utc
-    timezone = pytz.timezone('America/Vancouver')
+        "003",
+        "006",
+        "009",
+        "012",
+        "015",
+        "018",
+        "021",
+        "024",
+        "027",
+        "030",
+        "033",
+        "036",
+        "039",
+        "042",
+        "045",
+        "048",
+        "051",
+        "054",
+    ]
+
+    file_template = "CMC_reg_PRATE_SFC_0_ps10km_{datestr}{model_number}_P{iterator}.grib2"
+    # timezone = pytz.utc
+    timezone = pytz.timezone("America/Vancouver")
+
 
 class GribRegional_2(GribConfig):
-    model_number = '06'
-    extract_code = 'T'
-    url_template = 'http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/06/{iterator}'
+    model_number = "06"
+    extract_code = "T"
+    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/06/{iterator}"
     iteratorlist = [
-        '000', '003', '006', '009', '012', '015', '018', '021', '024', 
-        '027', '030', '033', '036', '039', '042', '045', '048', '051', 
-        '054']
-    date_str_format = '%Y%m%d'
-    file_template = 'CMC_reg_TMP_TGL_2_ps10km_{datestr}{model_number}_P{iterator}.grib2'
+        "000",
+        "003",
+        "006",
+        "009",
+        "012",
+        "015",
+        "018",
+        "021",
+        "024",
+        "027",
+        "030",
+        "033",
+        "036",
+        "039",
+        "042",
+        "045",
+        "048",
+        "051",
+        "054",
+    ]
+    date_str_format = "%Y%m%d"
+    file_template = "CMC_reg_TMP_TGL_2_ps10km_{datestr}{model_number}_P{iterator}.grib2"
     # CMC_reg_TMP_TGL_2_ps10km_%YYYY%%MT%%DD%%RH%_P%%A.grib2
-    #timezone = pytz.utc
-    timezone = pytz.timezone('America/Vancouver')
-    extract_code = 'T'
+    # timezone = pytz.utc
+    timezone = pytz.timezone("America/Vancouver")
+    extract_code = "T"
 
 
 class GribGlobal_1(GribConfig):
-    model_number = '00'
+    model_number = "00"
     iteratorlist = [
-        '063', '066', '069', '072', '075', '078', '081', '084', '087', 
-        '090', '093', '096', '099', '102', '105', '108', '111', '114',
-        '117', '120', '123', '126', '129', '132', '135', '138', '141',
-        '144', '147', '150', '153', '156', '159', '162', '165', '168',
-        '171', '174', '177', '180', '183', '186', '189', '192', '195',
-        '198', '201', '204', '207', '210', '213', '216', '219', '222', 
-        '225', '228', '231', '234', '237', '240']
-    file_template = 'CMC_glb_PRATE_SFC_0_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2'
-    url_template = "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    date_str_format = '%Y%m%d'
-    timezone = pytz.timezone('America/Vancouver')
-    extract_code = 'P'
+        "063",
+        "066",
+        "069",
+        "072",
+        "075",
+        "078",
+        "081",
+        "084",
+        "087",
+        "090",
+        "093",
+        "096",
+        "099",
+        "102",
+        "105",
+        "108",
+        "111",
+        "114",
+        "117",
+        "120",
+        "123",
+        "126",
+        "129",
+        "132",
+        "135",
+        "138",
+        "141",
+        "144",
+        "147",
+        "150",
+        "153",
+        "156",
+        "159",
+        "162",
+        "165",
+        "168",
+        "171",
+        "174",
+        "177",
+        "180",
+        "183",
+        "186",
+        "189",
+        "192",
+        "195",
+        "198",
+        "201",
+        "204",
+        "207",
+        "210",
+        "213",
+        "216",
+        "219",
+        "222",
+        "225",
+        "228",
+        "231",
+        "234",
+        "237",
+        "240",
+    ]
+    file_template = "CMC_glb_PRATE_SFC_0_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    url_template = (
+        "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    )
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone("America/Vancouver")
+    extract_code = "P"
 
 
 class GribGlobal_2(GribConfig):
-    model_number = '00'
+    model_number = "00"
     iteratorlist = [
-        '006', '009', '012', '015', '063', '066', '069', '072', '075',
-        '078', '081', '084', '087', '090', '093', '096', '099', '102', 
-        '105', '108', '111', '114', '117', '120', '123', '126', '129',
-        '132', '135', '138', '141', '144', '147', '150', '153', '156',
-        '159', '162', '165', '168', '171', '174', '177', '180', '183', 
-        '186', '189', '192', '195', '198', '201', '204', '207', '210',
-        '213', '216', '219', '222', '225', '228', '231', '234', '237',
-        '240']
-    file_template  = 'CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2'
-    url_template = "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    date_str_format = '%Y%m%d'
-    timezone = pytz.timezone('America/Vancouver')
-    extract_code = 'T'
+        "006",
+        "009",
+        "012",
+        "015",
+        "063",
+        "066",
+        "069",
+        "072",
+        "075",
+        "078",
+        "081",
+        "084",
+        "087",
+        "090",
+        "093",
+        "096",
+        "099",
+        "102",
+        "105",
+        "108",
+        "111",
+        "114",
+        "117",
+        "120",
+        "123",
+        "126",
+        "129",
+        "132",
+        "135",
+        "138",
+        "141",
+        "144",
+        "147",
+        "150",
+        "153",
+        "156",
+        "159",
+        "162",
+        "165",
+        "168",
+        "171",
+        "174",
+        "177",
+        "180",
+        "183",
+        "186",
+        "189",
+        "192",
+        "195",
+        "198",
+        "201",
+        "204",
+        "207",
+        "210",
+        "213",
+        "216",
+        "219",
+        "222",
+        "225",
+        "228",
+        "231",
+        "234",
+        "237",
+        "240",
+    ]
+    file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    url_template = (
+        "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    )
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone("America/Vancouver")
+    extract_code = "T"
+
+
+class GribConfigCollection():
+    def __init__(self):
+        self.cls_dict = self.get_class_list()
+        
+
+
+    def get_class_list(self):
+        """returns a list of class instances that are subclasses from 
+        abc.ABCMeta, ie those that contain actual config implementations
+        """
+        class_dict = {}
+        module_name = __name__
+        LOGGER.debug(f"module name: {module_name}")
+        clsmembers = inspect.getmembers(sys.modules[module_name], inspect.isclass)
+        for cls_mem in clsmembers:
+            class_name = cls_mem[0]
+            class_inst = cls_mem[1]
+            if cls_mem[1].__class__ is abc.ABCMeta:
+                class_dict[class_name] = class_inst
+        return class_dict
+
+
 
 extractParams = WGribExtractParams()
 
 
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     # testing the abc to confirm class variables required
 
     gribtest = GribRegional_1()
@@ -227,12 +409,21 @@ if __name__ == '__main__':
     gribtest3 = GribGlobal_1()
     gribtest4 = GribGlobal_2()
 
-    fstring = gribtest4.url_template.format(model_number=gribtest4.model_number,
-    iterator='219')
+    fstring = gribtest4.url_template.format(model_number=gribtest4.model_number, iterator="219")
     print(fstring)
-    tz = pytz.timezone('America/Vancouver')
+    tz = pytz.timezone("America/Vancouver")
 
-
+    import inspect
+    import sys
+    clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    print(clsmembers)
+    for classmem in clsmembers:
+        print(inspect.currentframe())
+        var = inspect.getmodule('GetGribConfig')
+        print(var)
+        klass = getattr(__name__, classmem)
+        Foo = classmem()
+        print([cls.__name__ for cls in Foo.__subclasses__()])
 
 """
 # all the file patterns downloaded, and the extract type

@@ -1,4 +1,4 @@
-name: Download Grib Files
+name: Download CANSIP Grib2 Files
 
 on: 
   push:
@@ -9,11 +9,11 @@ on:
   workflow_dispatch:
             
 jobs:
-  build:
+  dl_cansip_grib2:
     defaults:
       run:
         shell: bash
-    name: 'download dependencies'
+    name: 'Download CANSIP Grib2 Files'
     runs-on: ubuntu-20.04
     environment: RUN
     env:
@@ -36,6 +36,7 @@ jobs:
       name: install python dependencies
       shell: bash
       run: |
+        pip install --upgrade pip
         pip install -r requirements.txt
     - id: debug
       name: debug and list files
@@ -46,4 +47,4 @@ jobs:
       name: download grib files
       shell: bash
       run: | 
-        python src/main.py
+        python src/main_cansip.py

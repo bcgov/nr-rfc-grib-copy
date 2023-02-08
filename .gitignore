@@ -8,4 +8,6 @@ src/wgrib2/grib2
 wgrib2.tgz
 src/wgrib2/wgrib2
 tmp/
+cmc_data/
 junk*
+cansips_forecast_raw_latlon1.0x1.0_TMP_TGL_2m_2023-02_allmembers.grib2

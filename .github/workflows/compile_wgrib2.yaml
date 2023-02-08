@@ -1,0 +1,59 @@
+name: Compile the wgrib2 executable and cache as artifact
+
+# commenting out all triggers as going to use this instead
+# https://github.com/franTarkenton/wgrib2-Cygwin-Build/releases/download/20230203-0000/wgrib2
+# on: 
+#   push:
+#     # branches:
+#     #   - "main"
+#   workflow_dispatch:
+            
+jobs:
+  compile_wgrib2:
+    defaults:
+      run:
+        shell: bash
+    name: 'Compile wgrib2 binary for ubuntu'
+    runs-on: ubuntu-20.04
+    environment: RUN
+    env:
+      OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
+      CC: gcc
+      FC: gfortran
+
+    steps:
+    - uses: actions/checkout@v2
+      id: checkout
+      with:
+       fetch-depth: 0
+
+    - id: install_dependencies
+      name: install wgrib2 build dependencies
+      shell: bash
+      run: |
+        sudo apt-get install -y build-essential libaec-dev zlib1g-dev libcurl4-openssl-dev libboost-dev curl wget zip unzip bzip2 gfortran gcc g++
+
+    - id: download_extract_tarball
+      name: download and extract the source code tarball
+      shell: bash
+      run: |
+        wget -c ftp://ftp.cpc.ncep.noaa.gov/wd51we/wgrib2/wgrib2.tgz
+        tar -xzvf wgrib2.tgz
+
+    - id: compile wgrib2
+      name: compile the wgrib2
+      shell: bash
+      run: |
+        cd grib2
+        make
+
+    - id: upload_wgrib2_artifact
+      name: upload
+      shell: bash
+      run: |
+        cd grib2
+        make
+
+
+
+
