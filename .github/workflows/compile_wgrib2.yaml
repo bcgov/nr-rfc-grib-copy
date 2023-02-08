@@ -2,11 +2,11 @@ name: Compile the wgrib2 executable and cache as artifact
 
 # commenting out all triggers as going to use this instead
 # https://github.com/franTarkenton/wgrib2-Cygwin-Build/releases/download/20230203-0000/wgrib2
-# on: 
+on: 
 #   push:
 #     # branches:
 #     #   - "main"
-#   workflow_dispatch:
+  workflow_dispatch:
             
 jobs:
   compile_wgrib2:
