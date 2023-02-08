@@ -1,10 +1,11 @@
-import GetCansip
+import datetime
 import logging
 import logging.config
 import os
+
+import GetCansip
 import GetGrib
 import GetGribConfig
-import datetime
 
 # setup logging
 log_config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'logging.config')

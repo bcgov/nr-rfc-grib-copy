@@ -23,10 +23,10 @@ class GetGrib:
         defines the destination folder for where data will be downloaded
         to
 
-        :param dest_folder: a string that defines the destination folder for any 
+        :param dest_folder: a string that defines the destination folder for any
             grib data that will be downloaded using this module
         :type dest_folder: str
-        """    
+        """
         self.dest_folder = os.path.join(dest_folder, self.config.datestr)
         if not os.path.exists(self.dest_folder):
             os.makedirs(self.dest_folder)
@@ -57,7 +57,7 @@ class GetGrib:
         LOGGER.debug(f"dest folder: {self.dest_folder}")
         extract_output_dict = {}
         LOGGER.info("extracting data from the grib2 files...")
-        # iterating through the various input values that went into the 
+        # iterating through the various input values that went into the
         # defining the file that needed to be downloaded
         for iterval in self.config.iteratorlist:
             # get the name of the grib2 file to read
@@ -80,7 +80,7 @@ class GetGrib:
                 LOGGER.info(f"extracting from {src_file}")
                 # running the command
                 process = subprocess.Popen(cmd,
-                     stdout=subprocess.PIPE, 
+                     stdout=subprocess.PIPE,
                      stderr=subprocess.PIPE)
                 # collect the output from the command
                 stdout, stderr = process.communicate()
@@ -89,12 +89,12 @@ class GetGrib:
 
                 # extract_code like 'P' or 'T' + iteration number
                 # creates key, ie P1, P2, T1, T2 etc...
-                # put the output into a dictionary where the key corresponds 
+                # put the output into a dictionary where the key corresponds
                 # with the output type, ie p1, p2 etc...
                 if extract_name not in extract_output_dict:
                     extract_output_dict[extract_name] = ''
                 LOGGER.debug(f"stdout type: {type(stdout)}")
-                extract_output_dict[extract_name] = extract_output_dict[extract_name] + stdout.decode("utf-8") 
+                extract_output_dict[extract_name] = extract_output_dict[extract_name] + stdout.decode("utf-8")
         os.chdir(start_dir)
         return extract_output_dict
 
@@ -117,13 +117,13 @@ class GetGrib:
         :return: _description_
         """
         fstring_property_dict = {}
-        properties = self.get_property_list(self.config)
+        properties = self.get_property_list()
         for prop in properties:
             if prop in fstring:
                 fstring_property_dict[prop] = getattr(self.config, prop)
         return fstring_property_dict
 
-    def get_property_list(self, obj):
+    def get_property_list(self):
         property_list = []
         props = inspect.getmembers(self.config)
         for prop in props:
@@ -148,23 +148,23 @@ class CoalateGribOutput:
     There are numerous files for each type
     WGRIB2 executable gets run against each file with 4 different sets
     of input parameters
-    The output from the WGRIB2 command is collected in a dictionary 
+    The output from the WGRIB2 command is collected in a dictionary
     with keys that correspond with the various output types
         P1, P2, P3... T1, T2, T3.. etc
-    
-    The class exists to combine the various dictionaries into a single 
-    dictionary, and then output the results of the single dictionary 
+
+    The class exists to combine the various dictionaries into a single
+    dictionary, and then output the results of the single dictionary
     to files.
     """
 
     def __init__(self):
         self.grib_outputs = {}
 
-    def add_dict(self, inputDict):
-        for key in inputDict:
+    def add_dict(self, input_dict):
+        for key in input_dict:
             if key not in self.grib_outputs:
                 self.grib_outputs[key] =  ''
-            self.grib_outputs[key] = self.grib_outputs[key] + inputDict[key]
+            self.grib_outputs[key] = self.grib_outputs[key] + input_dict[key]
 
     def output(self, output_directory):
         """writes the combined grib data output to text files
@@ -173,7 +173,7 @@ class CoalateGribOutput:
         """
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
-        
+
         for key in self.grib_outputs:
             outfile = os.path.join(output_directory, f'{key}.txt')
             with open(outfile, 'w') as fh:
@@ -185,13 +185,13 @@ class CopyCMC2ObjectStorage:
         self.grib_confs = GetGribConfig.GribConfigCollection()
 
     def copy_to_ostore(self, src_folder, ostore_folder):
-        # iterate over the various configs... 
+        # iterate over the various configs...
         # copy tmp/gribs/<date> to ostore
         src_files = os.listdir(src_folder)
 
         ostore_objects = self.objstor.listObjects(ostore_folder, recursive=True, returnFileNamesOnly=True)
         ostore_objects = [os.path.basename(ostore_file) for ostore_file in ostore_objects]
-        
+
         LOGGER.info(f"found {len(ostore_objects)} in the ostore folder: {ostore_folder}")
         for src_file in src_files:
             src_file_path = os.path.join(src_folder, src_file)

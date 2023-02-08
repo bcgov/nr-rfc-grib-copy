@@ -1,20 +1,21 @@
-name: Download CANSIP Grib2 Files
+name: Download and Process CMC Grib2 Files
 
-on: 
+on:
   push:
     branches:
       - "feat/daily-grib2-download"
+  # cron schedules are in UTC
+  # this job should run at 5.31 am pst, which translates to 1.31 pm.
   schedule:
-    # run at 5:31 am 
-    - cron: '31 5 * * *'
+    - cron: '31 13 * * *'
   workflow_dispatch:
-            
+
 jobs:
   dl_cansip_grib2:
     defaults:
       run:
         shell: bash
-    name: 'Download CMC Grib2 Files'
+    name: 'Download and Process CMC Grib2 Files'
     runs-on: ubuntu-20.04
     environment: RUN
     env:
@@ -25,14 +26,14 @@ jobs:
       WGRIB_UTILITY: /usr/local/bin/wgrib2
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       id: checkout
       with:
        fetch-depth: 0
 
     - uses: actions/setup-python@v4
       with:
-        python-version: '3.11' 
+        python-version: '3.11'
 
     - id: install_dependencies
       name: install python dependencies
@@ -57,5 +58,5 @@ jobs:
     - id: download__cmc_grib
       name: download grib files
       shell: bash
-      run: | 
+      run: |
         python src/main_cmc.py

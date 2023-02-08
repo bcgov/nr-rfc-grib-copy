@@ -1,9 +1,11 @@
-import requests
-import logging
-import config
 import datetime
+import logging
 import os
+
 import pytz
+import requests
+
+import config
 import ObjectStore
 
 LOGGER = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ class CopyCanSip:
         return grib_file_url
 
     def get_o_store_path(self):
-        """get the path that the grib file should be copied to in 
+        """get the path that the grib file should be copied to in
         object store
         """
         grib_file = self.getGribFile()
