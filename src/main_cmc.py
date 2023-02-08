@@ -54,6 +54,7 @@ def get_extract_gribs():
     coalate.add_dict(grib_glob2_data)
     datestr = datetime.datetime.now().strftime('%Y%m%d')
     dest_folder = os.path.join(dest_folder_summary, datestr)
+    LOGGER.info(f'dest folder: {dest_folder}')
     coalate.output(dest_folder)
 
 def persist_gribs_to_object_store():

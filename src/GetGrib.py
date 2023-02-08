@@ -40,13 +40,13 @@ class GetGrib:
             src_file = self.get_src_file(iterator=iterval)
             full_url = os.path.join(url, src_file)
             dest_file = os.path.join(self.dest_folder, src_file)
-            LOGGER.debug(f"url: {full_url}")
+            LOGGER.info(f"url to aquire file from: {full_url}")
             if not os.path.exists(dest_file):
                 r = requests.get(full_url, allow_redirects=True)
                 LOGGER.debug(f"request: {r.status_code}")
-                if r.status_code == 200:
-                    with open(dest_file, 'wb') as fh:
-                        fh.write(r.content)
+                r.raise_for_status()
+                with open(dest_file, 'wb') as fh:
+                    fh.write(r.content)
 
     def extract(self):
         # extract code = P or T
@@ -54,7 +54,9 @@ class GetGrib:
         # wgrib_params = the parameters to be used when wgrib2 is executed
         start_dir = os.getcwd()
         os.chdir(self.dest_folder)
+        LOGGER.debug(f"dest folder: {self.dest_folder}")
         extract_output_dict = {}
+        LOGGER.info("extracting data from the grib2 files...")
         # iterating through the various input values that went into the 
         # defining the file that needed to be downloaded
         for iterval in self.config.iteratorlist:
@@ -75,6 +77,7 @@ class GetGrib:
                 cmd = [config.WGRIB_UTILITY, src_file]
                 cmd.extend(wgrib_params_list)
                 LOGGER.debug(f"running cmd: {' '.join(cmd[0:5])} ...")
+                LOGGER.info(f"extracting from {src_file}")
                 # running the command
                 process = subprocess.Popen(cmd,
                      stdout=subprocess.PIPE, 
@@ -183,13 +186,13 @@ class CopyCMC2ObjectStorage:
 
     def copy_to_ostore(self, src_folder, ostore_folder):
         # iterate over the various configs... 
-        # copy tmp/gribs/<date> to ostore 
+        # copy tmp/gribs/<date> to ostore
         src_files = os.listdir(src_folder)
 
         ostore_objects = self.objstor.listObjects(ostore_folder, recursive=True, returnFileNamesOnly=True)
         ostore_objects = [os.path.basename(ostore_file) for ostore_file in ostore_objects]
         
-        LOGGER.debug(f"found {len(ostore_objects)} in the ostore folder: {ostore_folder}")
+        LOGGER.info(f"found {len(ostore_objects)} in the ostore folder: {ostore_folder}")
         for src_file in src_files:
             src_file_path = os.path.join(src_folder, src_file)
             ostore_file_path = os.path.join(ostore_folder, src_file)
