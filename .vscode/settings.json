@@ -1,0 +1,32 @@
+{
+    "editor.rulers": [
+        80,
+        120
+    ],
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
+    "python.linting.flake8Args": ["--append-config=${workspaceFolder}/.flake8"],
+
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--line-length=99"
+    ],
+    "isort.args":["--profile", "black"],
+    //"python.sortImports.args": ["-rc", "--atomic"],
+    // "python.sortImports.args": [
+    //     "--profile",
+    //     "black"
+    // ],
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
+    },
+    "python.defaultInterpreterPath": "./venv/bin/python",
+    "python.pythonPath": "./venv/bin/python",
+    "files.trimTrailingWhitespace": true,
+    "files.eol": "\n"
+}

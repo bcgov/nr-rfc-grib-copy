@@ -7,12 +7,12 @@ OBJ_STORE_USER      - account name / access key id
 OBJ_STORE_HOST      - object store host
 """
 
-from datetime import timedelta
 import logging
+import os
+from datetime import timedelta
 
 import boto3
 import minio
-import os
 
 import config
 

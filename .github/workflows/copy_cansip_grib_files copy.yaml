@@ -1,19 +1,20 @@
-name: Download Grib Files
+name: Download CANSIP Grib2 Files
 
-on: 
+on:
   push:
     branches:
       - "main"
   schedule:
-    - cron: '1 9 * * *'
+  # job should run at 9.01 pst which translates to 5pm UTC
+    - cron: '1 17 * * *'
   workflow_dispatch:
-            
+
 jobs:
-  build:
+  dl_cansip_grib2:
     defaults:
       run:
         shell: bash
-    name: 'download dependencies'
+    name: 'Download CANSIP Grib2 Files'
     runs-on: ubuntu-20.04
     environment: RUN
     env:
@@ -23,19 +24,20 @@ jobs:
       OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       id: checkout
       with:
        fetch-depth: 0
 
     - uses: actions/setup-python@v4
       with:
-        python-version: '3.11' 
+        python-version: '3.11'
 
     - id: install_dependencies
       name: install python dependencies
       shell: bash
       run: |
+        pip install --upgrade pip
         pip install -r requirements.txt
     - id: debug
       name: debug and list files
@@ -45,5 +47,5 @@ jobs:
     - id: download_grib
       name: download grib files
       shell: bash
-      run: | 
-        python src/main.py
+      run: |
+        python src/main_cansip.py
