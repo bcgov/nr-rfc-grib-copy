@@ -1,6 +1,8 @@
 import datetime
 import inspect
 import logging
+import multiprocessing
+import multiprocessing.pool
 import os
 import subprocess
 import sys
@@ -33,7 +35,9 @@ class GetGrib:
         self.dest_folder = os.path.realpath(self.dest_folder)
 
     def get(self):
+        get_arg_list = []
         for iterval in self.config.iteratorlist:
+            url_dest_dict = {}
             LOGGER.debug(f"iterval: {iterval}")
             url = self.get_url(iterator=iterval)
             LOGGER.debug(f"url: {url}")
@@ -42,61 +46,123 @@ class GetGrib:
             dest_file = os.path.join(self.dest_folder, src_file)
             LOGGER.info(f"url to aquire file from: {full_url}")
             if not os.path.exists(dest_file):
-                r = requests.get(full_url, allow_redirects=True)
-                LOGGER.debug(f"request: {r.status_code}")
-                r.raise_for_status()
-                with open(dest_file, 'wb') as fh:
-                    fh.write(r.content)
+                url_dest_dict['url'] = full_url
+                url_dest_dict['dest_file'] = dest_file
+                get_arg_list.append(url_dest_dict)
+
+        with multiprocessing.Pool(4) as p:
+            p.map(self._get, get_arg_list)
+
+
+    def _get(self, url_destfile_dict):
+        LOGGER.debug("starting task ...")
+        r = requests.get(url_destfile_dict['url'], allow_redirects=True)
+        LOGGER.debug(f"request: {r.status_code}")
+        r.raise_for_status()
+        with open(url_destfile_dict['dest_file'], 'wb') as fh:
+            fh.write(r.content)
+        LOGGER.debug("completed task ...")
+
 
     def extract(self):
+        """ Looks at the config object in the 'config' property.  Then looking
+        at the values in the 'iteratorlist', 'model_number', 'extract_code',
+        'file_template' and 'file_template' assembles the name of the object
+        that should be downloaded as well as the complete url to that object.
+
+        see the 'GetGribConfig.py' file for detailed documentation on how
+        different paths are configured.
+
+        The method iterates over the data defined in the config object and
+        runs the wgrib2 command line utility to extract the information from
+        the various grib files.  The output from wgrib2 goes to STDOUT and
+        is captured and returned in a dictionary where the keys are a combination
+        of the 'extract_code' and the number of the iteration.
+
+        Extract code is either a 'P' or a 'T'. The extract parameters are
+        defined in the module GetGribConfig.py by the class WGribExtractParams.
+
+
+        :return: a dictionary with the results of various runs by extract names.
+            for example P1 - the output of the runs for P1.
+        """
+        number_concurrent_processes = 4
+        pool = multiprocessing.pool.ThreadPool(number_concurrent_processes)
+        results = []
+        output = {}
+
         # extract code = P or T
         # extract name = P1, T1, T2... etc
         # wgrib_params = the parameters to be used when wgrib2 is executed
-        start_dir = os.getcwd()
-        os.chdir(self.dest_folder)
+
         LOGGER.debug(f"dest folder: {self.dest_folder}")
         extract_output_dict = {}
         LOGGER.info("extracting data from the grib2 files...")
-        # iterating through the various input values that went into the
-        # defining the file that needed to be downloaded
+
+        # iterating through the various input values that went into defining the
+        # file that needed to be downloaded
         for iterval in self.config.iteratorlist:
             # get the name of the grib2 file to read
             src_file = self.get_src_file(iterator=iterval)
+            src_file_full_path = os.path.join(self.dest_folder, src_file)
+
             # get the parameter list for each wgrib2 run on this file type
             extract_params = self.config.extract_params_object.get_wgrib_params(self.config.extract_code)
+
             # iterate over the extract params using a counter... the counter
             # will be used to define the output p1, p2.. or t1, t2.. files
             for extract_cnt in range(0, len(extract_params)):
                 # calculate the output key, t1 p1 p3 etc
                 extract_name = f'{self.config.extract_code}{extract_cnt + 1}'
+
                 # wgrib params as a single string
                 wgrib_params = extract_params[extract_name]
-                # putting into a list to assemble the command for subprocess
+
+                # putting into a list to assemble the command to be sent to
+                # the os via the subprocess module
                 wgrib_params_list = wgrib_params.split(' ')
+
                 # creating the command line to call wgrib
-                cmd = [config.WGRIB_UTILITY, src_file]
+                cmd = [config.WGRIB_UTILITY, src_file_full_path]
                 cmd.extend(wgrib_params_list)
                 LOGGER.debug(f"running cmd: {' '.join(cmd[0:5])} ...")
                 LOGGER.info(f"extracting from {src_file}")
-                # running the command
-                process = subprocess.Popen(cmd,
-                     stdout=subprocess.PIPE,
-                     stderr=subprocess.PIPE)
-                # collect the output from the command
-                stdout, stderr = process.communicate()
-                LOGGER.debug(f"stdout: {stdout[0:40]}...")
-                LOGGER.debug(f"stderr: {stderr}")
+                LOGGER.debug(f"cmd type: {type(cmd)}, {len(cmd)}")
 
-                # extract_code like 'P' or 'T' + iteration number
-                # creates key, ie P1, P2, T1, T2 etc...
-                # put the output into a dictionary where the key corresponds
-                # with the output type, ie p1, p2 etc...
+                # adding the command to the async executor pool
+                output[extract_name] = pool.apply_async(self._extract, args=[cmd])
+
+        # wait for all the executors to complete
+        pool.close()
+        pool.join()
+
+        # iterate over all the output from the wgrib2 commands and use it to
+        # construct the extract_output_dict dictionary (appends similar model
+        # runs into a single record)
+        for iterval in self.config.iteratorlist:
+            extract_params = self.config.extract_params_object.get_wgrib_params(self.config.extract_code)
+            for extract_cnt in range(0, len(extract_params)):
+                extract_name = f'{self.config.extract_code}{extract_cnt + 1}'
                 if extract_name not in extract_output_dict:
                     extract_output_dict[extract_name] = ''
-                LOGGER.debug(f"stdout type: {type(stdout)}")
-                extract_output_dict[extract_name] = extract_output_dict[extract_name] + stdout.decode("utf-8")
-        os.chdir(start_dir)
+                extract_output_dict[extract_name] = extract_output_dict[extract_name] + output[extract_name].get()
+
         return extract_output_dict
+
+    def _extract(self, cmd:list):
+        """method makes a call to a shell based command and captures the output
+        and returns it.
+
+        :param cmd: a list of parameters that should be sent to the command line
+        :return: the stdout from the executed command
+        """
+        process = subprocess.Popen(cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        output = stdout.decode("utf-8")
+        return output
+
 
     def get_url(self, iterator=None):
         """templates can use any property that is populated in the class
