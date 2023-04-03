@@ -75,4 +75,4 @@ def persist_gribs_to_object_store():
         ostore_folder=ostore_folder)
 
 get_extract_gribs()
-persist_gribs_to_object_store()
+# persist_gribs_to_object_store()
