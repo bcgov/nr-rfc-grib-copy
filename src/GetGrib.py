@@ -15,6 +15,7 @@ import ObjectStore
 
 LOGGER = logging.getLogger(__name__)
 
+
 class GetGrib:
     def __init__(self, dest_folder:str, config: GetGribConfig.GribConfig):
         self.config = config
@@ -53,7 +54,6 @@ class GetGrib:
         with multiprocessing.Pool(4) as p:
             p.map(self._get, get_arg_list)
 
-
     def _get(self, url_destfile_dict):
         LOGGER.debug("starting task ...")
         r = requests.get(url_destfile_dict['url'], allow_redirects=True)
@@ -62,7 +62,6 @@ class GetGrib:
         with open(url_destfile_dict['dest_file'], 'wb') as fh:
             fh.write(r.content)
         LOGGER.debug("completed task ...")
-
 
     def extract(self):
         """ Looks at the config object in the 'config' property.  Then looking
@@ -163,7 +162,6 @@ class GetGrib:
         output = stdout.decode("utf-8")
         return output
 
-
     def get_url(self, iterator=None):
         """templates can use any property that is populated in the class
         This method looks at what properties are required, and uses them
@@ -208,6 +206,7 @@ class GetGrib:
         LOGGER.debug(f"file_name: {file_name}")
         return file_name
 
+
 class CoalateGribOutput:
     """
     There are 4 different grib files that get downloaded from env can.
@@ -245,12 +244,16 @@ class CoalateGribOutput:
             with open(outfile, 'w') as fh:
                 fh.write(self.grib_outputs[key])
 
+
 class CopyCMC2ObjectStorage:
     def __init__(self):
         self.objstor = ObjectStore.ObjectStoreUtil()
         self.grib_confs = GetGribConfig.GribConfigCollection()
 
     def copy_to_ostore(self, src_folder, ostore_folder):
+
+        pool = multiprocessing.pool.ThreadPool(6)
+
         # iterate over the various configs...
         # copy tmp/gribs/<date> to ostore
         src_files = os.listdir(src_folder)
@@ -259,12 +262,19 @@ class CopyCMC2ObjectStorage:
         ostore_objects = [os.path.basename(ostore_file) for ostore_file in ostore_objects]
 
         LOGGER.info(f"found {len(ostore_objects)} in the ostore folder: {ostore_folder}")
+        job_list = []
+        # adding upload jobs to the queue
         for src_file in src_files:
             src_file_path = os.path.join(src_folder, src_file)
             ostore_file_path = os.path.join(ostore_folder, src_file)
             if src_file not in ostore_objects:
                 LOGGER.debug(f"creating ostore folder: {ostore_file_path}")
-                self.objstor.putObject(ostore_file_path, src_file_path)
+                pool.apply_async(self.objstor.putObject, kwds={'destPath': ostore_file_path, 'localPath': src_file_path})
+                #self.objstor.putObject(ostore_file_path, src_file_path)
+        # waiting for the queue to close
+        pool.close()
+        pool.join()
+
 
 if __name__ == '__main__':
     dest_folder = 'tmp'
