@@ -1,9 +1,9 @@
 name: Download CANSIP Grib2 Files
 
 on:
-  push:
-    branches:
-      - "main"
+  # push:
+  #   branches:
+  #     - "main"
   schedule:
   # job should run at 9.01 pst which translates to 5pm UTC
     - cron: '1 17 * * *'
