@@ -3,6 +3,8 @@ import logging
 import logging.config
 import os
 
+import pytz
+
 import GetCansip
 import GetGrib
 import GetGribConfig
@@ -18,6 +20,8 @@ ostore_folder_gribs = os.path.join('cmc', 'gribs')
 dest_folder_summary = os.path.join('cmc_data', 'summary')
 ostore_folder_summary = os.path.join('cmc', 'summary')
 
+# TZ = 'America/Toronto'
+TZ = pytz.timezone('America/Vancouver')
 
 def get_extract_gribs():
     # needs to run at a specific time or the data won't be available
@@ -52,7 +56,7 @@ def get_extract_gribs():
     coalate.add_dict(grib_reg2_data)
     coalate.add_dict(grib_glob1_data)
     coalate.add_dict(grib_glob2_data)
-    datestr = datetime.datetime.now().strftime('%Y%m%d')
+    datestr = datetime.datetime.now(TZ).strftime('%Y%m%d')
     dest_folder = os.path.join(dest_folder_summary, datestr)
     LOGGER.info(f'dest folder: {dest_folder}')
     coalate.output(dest_folder)
@@ -60,7 +64,7 @@ def get_extract_gribs():
 def persist_gribs_to_object_store():
     # finally copy gribs from local storage to object storage
     copy_2_ostore = GetGrib.CopyCMC2ObjectStorage()
-    datestr = datetime.datetime.now().strftime('%Y%m%d')
+    datestr = datetime.datetime.now(TZ).strftime('%Y%m%d')
     src_folder = os.path.join(dest_folder_gribs, datestr)
     ostore_folder = os.path.join(ostore_folder_gribs, datestr)
     copy_2_ostore.copy_to_ostore(
@@ -75,4 +79,4 @@ def persist_gribs_to_object_store():
         ostore_folder=ostore_folder)
 
 get_extract_gribs()
-# persist_gribs_to_object_store()
+persist_gribs_to_object_store()
