@@ -40,7 +40,7 @@ jobs:
       shell: bash
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r scripts/requirements.txt
 
     - id: get_wgrib_2
       name: get the wgrib2 binary
@@ -59,4 +59,4 @@ jobs:
       name: download grib files
       shell: bash
       run: |
-        python src/main_cmc.py
+        python scripts/src/main_cmc.py
