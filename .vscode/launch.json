@@ -20,6 +20,16 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args" : ["noargs"]
-        }
+        },
+        {
+            "name": "debug config",
+            "type": "python",
+            "request": "launch",
+            "program": "src/GetGribConfig.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args" : ["noargs"]
+        },
+
     ]
 }

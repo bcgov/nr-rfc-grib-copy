@@ -6,9 +6,12 @@ import abc
 import datetime
 import inspect
 import logging
+import re
 import sys
 
+import bs4
 import pytz
+import requests
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_GRIB_CONFIG_TZ = 'America/Vancouver'
@@ -62,6 +65,45 @@ class GribConfig(metaclass=abc.ABCMeta):
         now = datetime.datetime.now(self.timezone)
         datestr = now.strftime(self.date_str_format)
         return datestr
+
+    def get_iterator(self):
+        """
+        if the iterator is populated with a list with data in it, it will iterate
+        over that list.   If the iterator resolves to 'False' then will query
+        the end point described in the property 'url_template' and populate
+        the list with the contents of that directory and return that list
+        """
+        if self.iteratorlist:
+            if isinstance(self.iteratorlist[0], int):
+                # need to cast list to 0 padded 3 character strings
+                tmp = []
+                for iter in self.iteratorlist:
+                    tmp.append(f'{iter:03}')
+                self.iteratorlist = tmp
+            return self.iteratorlist
+        else:
+            self.iteratorlist = []
+            # matches the pattern <number><number><number>/
+            dir_regex_str = '^[0-9]{3}\/'
+            dir_regex = re.compile(dir_regex_str)
+            LOGGER.debug(f"url template string: {self.url_template}")
+            url = self.url_template.format(datestr=self.datestr, iterator='', model_number=self.model_number)
+            LOGGER.debug(f'url with the directories in it is: {url}')
+
+            # get contents of the page, this is a little fragile as if env can
+            # switches web servers the format that is provided descrbing the
+            # directories may change.
+
+            # currently its looking for a <pre> tag, then it evaluates every
+            # anchor 'a' tag under the <pre> tag for something that looks like
+            # the date step format of 000 or 001, etc...
+            r = requests.get(url)
+            soup = bs4.BeautifulSoup(r.text, features="html.parser")
+            for a in soup.find('pre').find_all('a'):
+                if dir_regex.match(a['href']):
+                    dir_name = a['href'].replace("/", '')
+                    self.iteratorlist.append(dir_name)
+            return self.iteratorlist
 
     @property
     def extract_params_object(self):
@@ -170,7 +212,6 @@ class WGribExtractParams:
             raise InvalidExtractCodeError(extract_code)
         return extract_dict
 
-
 class InvalidExtractCodeError(Exception):
     def __init__(self, extract_code):
         self.message = (
@@ -180,12 +221,8 @@ class InvalidExtractCodeError(Exception):
 
 
 class GribRegional_1(GribConfig):
-    model_number = "06"
-    extract_code = "P"
-
-    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/06/{iterator}"
-    date_str_format = "%Y%m%d"
-    iteratorlist = [
+    '''
+    _iteratorlist = [
         "003",
         "006",
         "009",
@@ -205,16 +242,20 @@ class GribRegional_1(GribConfig):
         "051",
         "054",
     ]
+    '''
+    model_number = "06"
+    extract_code = "P"
+    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    date_str_format = "%Y%m%d"
+    iteratorlist = list(range(2, 84))
     file_template = "CMC_reg_PRATE_SFC_0_ps10km_{datestr}{model_number}_P{iterator}.grib2"
     # example of setting timezone to utc.. `timezone = pytz.utc`
     timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
 
 
 class GribRegional_2(GribConfig):
-    model_number = "06"
-    extract_code = "T"
-    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/06/{iterator}"
-    iteratorlist = [
+    '''
+    _iteratorlist = [
         "000",
         "003",
         "006",
@@ -235,6 +276,11 @@ class GribRegional_2(GribConfig):
         "051",
         "054",
     ]
+    '''
+    model_number = "06"
+    extract_code = "T"
+    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    iteratorlist = list(range(0, 84))
     date_str_format = "%Y%m%d"
     file_template = "CMC_reg_TMP_TGL_2_ps10km_{datestr}{model_number}_P{iterator}.grib2"
     # CMC_reg_TMP_TGL_2_ps10km_%YYYY%%MT%%DD%%RH%_P%%A.grib2
@@ -244,8 +290,8 @@ class GribRegional_2(GribConfig):
 
 
 class GribGlobal_1(GribConfig):
-    model_number = "00"
-    iteratorlist = [
+    '''
+    _iteratorlist = [
         "063",
         "066",
         "069",
@@ -307,6 +353,9 @@ class GribGlobal_1(GribConfig):
         "237",
         "240",
     ]
+    '''
+    model_number = "00"
+    iteratorlist = list(range(90,241,3))
     file_template = "CMC_glb_PRATE_SFC_0_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     url_template = (
         "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
@@ -317,8 +366,8 @@ class GribGlobal_1(GribConfig):
 
 
 class GribGlobal_2(GribConfig):
-    model_number = "00"
-    iteratorlist = [
+    '''
+    _iteratorlist = [
         "006",
         "009",
         "012",
@@ -384,6 +433,10 @@ class GribGlobal_2(GribConfig):
         "237",
         "240",
     ]
+    '''
+    model_number = "00"
+    iteratorlist = list(range(90,241,3))
+    iteratorlist.extend(list(range(6, 16, 3))) # these are added on and used in model for bias correction
     file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     url_template = (
         "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
@@ -424,6 +477,32 @@ if __name__ == "__main__":
     gribtest3 = GribGlobal_1()
     gribtest4 = GribGlobal_2()
 
-    fstring = gribtest4.url_template.format(model_number=gribtest4.model_number, iterator="219")
+    fstring = gribtest.url_template.format(datestr='20230405', iterator="", model_number='06')
     print(fstring)
     tz = pytz.timezone("America/Vancouver")
+
+    iter = gribtest.get_iterator()
+    print(f'iter is: {iter}')
+
+    # import re
+    # import sys
+
+    # import bs4
+    # import requests
+
+    # # matches the pattern <number><number><number>/
+    # dir_regex_str = '^[0-9]{3}\/'
+    # dir_regex = re.compile(dir_regex_str)
+
+
+    # r = requests.get(fstring)
+    # print(f"contents: {r.text}")
+    # soup = bs4.BeautifulSoup(r.text)
+    # for a in soup.find('pre').find_all('a'):
+
+    #     if dir_regex.match(a['href']):
+    #         dir_name = a['href'].replace("/", '')
+            # print(dir_name)
+
+# http://hpfx.collab.science.gc.ca/20230405/WXO-DD/model_gem_regional/10km/grib2/06/003/CMC_reg_PRATE_SFC_0_ps10km_2023040506_P003.grib2
+# http://hpfx.collab.science.gc.ca/20230405/WXO-DD/model_gem_regional/10km/grib2/06/000/CMC_reg_PRATE_SFC_0_ps10km_2023040506_P000.grib2

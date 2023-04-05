@@ -28,5 +28,6 @@
     "python.defaultInterpreterPath": "./venv/bin/python",
     "python.pythonPath": "./venv/bin/python",
     "files.trimTrailingWhitespace": true,
-    "files.eol": "\n"
+    "files.eol": "\n",
+    "terminal.integrated.scrollback": 5000
 }

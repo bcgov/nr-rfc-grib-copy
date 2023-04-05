@@ -12,3 +12,4 @@ cmc_data/
 cmc_data2/
 junk*
 cansips_forecast_raw_latlon1.0x1.0_TMP_TGL_2m_2023-02_allmembers.grib2
+scripts/src/wgrib2/
