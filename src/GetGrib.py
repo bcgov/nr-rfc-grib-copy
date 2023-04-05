@@ -37,7 +37,8 @@ class GetGrib:
 
     def get(self):
         get_arg_list = []
-        for iterval in self.config.iteratorlist:
+
+        for iterval in self.config.get_iterator():
             url_dest_dict = {}
             LOGGER.debug(f"iterval: {iterval}")
             url = self.get_url(iterator=iterval)
@@ -56,9 +57,13 @@ class GetGrib:
 
     def _get(self, url_destfile_dict):
         LOGGER.debug("starting task ...")
+
         r = requests.get(url_destfile_dict['url'], allow_redirects=True)
         LOGGER.debug(f"request: {r.status_code}")
-        r.raise_for_status()
+        if r.status_code == 404:
+            LOGGER.warning(f"could not find the file: {url_destfile_dict['url']}")
+        else:
+            r.raise_for_status()
         with open(url_destfile_dict['dest_file'], 'wb') as fh:
             fh.write(r.content)
         LOGGER.debug("completed task ...")
@@ -85,6 +90,8 @@ class GetGrib:
         :return: a dictionary with the results of various runs by extract names.
             for example P1 - the output of the runs for P1.
         """
+        # should cache the results of the extract to disk instead of just keeping
+        # in memory
         number_concurrent_processes = 4
         pool = multiprocessing.pool.ThreadPool(number_concurrent_processes)
         results = []
@@ -100,7 +107,7 @@ class GetGrib:
 
         # iterating through the various input values that went into defining the
         # file that needed to be downloaded
-        for iterval in self.config.iteratorlist:
+        for iterval in self.config.get_iterator():
             # get the name of the grib2 file to read
             src_file = self.get_src_file(iterator=iterval)
             src_file_full_path = os.path.join(self.dest_folder, src_file)
@@ -108,9 +115,13 @@ class GetGrib:
             # get the parameter list for each wgrib2 run on this file type
             extract_params = self.config.extract_params_object.get_wgrib_params(self.config.extract_code)
 
+            # create output key
+            output[iterval] = {}
+
             # iterate over the extract params using a counter... the counter
             # will be used to define the output p1, p2.. or t1, t2.. files
             for extract_cnt in range(0, len(extract_params)):
+
                 # calculate the output key, t1 p1 p3 etc
                 extract_name = f'{self.config.extract_code}{extract_cnt + 1}'
 
@@ -128,8 +139,11 @@ class GetGrib:
                 LOGGER.info(f"extracting from {src_file}")
                 LOGGER.debug(f"cmd type: {type(cmd)}, {len(cmd)}")
 
-                # adding the command to the async executor pool
-                output[extract_name] = pool.apply_async(self._extract, args=[cmd])
+                if os.path.exists(src_file_full_path):
+                    # adding the command to the async executor pool
+                    output[iterval][extract_name] = pool.apply_async(self._extract, args=[cmd])
+                else:
+                    LOGGER.warning(f"source file: {src_file_full_path} does not exist")
 
         # wait for all the executors to complete
         pool.close()
@@ -138,13 +152,13 @@ class GetGrib:
         # iterate over all the output from the wgrib2 commands and use it to
         # construct the extract_output_dict dictionary (appends similar model
         # runs into a single record)
-        for iterval in self.config.iteratorlist:
+        for iterval in self.config.get_iterator():
             extract_params = self.config.extract_params_object.get_wgrib_params(self.config.extract_code)
             for extract_cnt in range(0, len(extract_params)):
                 extract_name = f'{self.config.extract_code}{extract_cnt + 1}'
                 if extract_name not in extract_output_dict:
                     extract_output_dict[extract_name] = ''
-                extract_output_dict[extract_name] = extract_output_dict[extract_name] + output[extract_name].get()
+                extract_output_dict[extract_name] = extract_output_dict[extract_name] + output[iterval][extract_name].get()
 
         return extract_output_dict
 
@@ -167,7 +181,10 @@ class GetGrib:
         This method looks at what properties are required, and uses them
         to create the url string using the url format string.
         """
+        LOGGER.debug(f"iterator: {iterator}")
+
         fstring_properties = self.get_property_in_fstring(self.config.url_template)
+        LOGGER.debug(f"fstring_properties: {fstring_properties}")
         if iterator and 'iterator' in self.config.file_template:
             fstring_properties['iterator'] = iterator
         url = self.config.url_template.format(**fstring_properties)
