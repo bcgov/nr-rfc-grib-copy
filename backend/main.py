@@ -1,12 +1,13 @@
 import asyncio
-import nest_asyncio
-from fastapi import FastAPI
 import logging
 
-from app.messaging.messagehandler import MessageHandler
+import nest_asyncio
+from fastapi import FastAPI
+
+# from app.messaging.messagehandler import MessageHandler
 
 app = FastAPI(title="Consumer Python", version="0.0.1")
-jsMsgHandler = MessageHandler("EVENTS-TOPIC", "consumer-python", "consumer-python")
+# jsMsgHandler = MessageHandler("EVENTS-TOPIC", "consumer-python", "consumer-python")
 
 
 # Define the filter
@@ -19,12 +20,12 @@ class EndpointFilter(logging.Filter):
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 
-async def connect():
-    await jsMsgHandler.connect()
+# async def connect():
+#     await jsMsgHandler.connect()
 
 
-nest_asyncio.apply()
-asyncio.run(connect())
+# nest_asyncio.apply()
+# asyncio.run(connect())
 
 
 @app.get("/")
