@@ -1,21 +1,26 @@
 name: build listener image
 
 # used on push for testing / development
-on:
-  push:
-    branches: ['master', 'main', 'feat/build-docker']
-
 # on:
-#   pull_request:
-#     # debug: remove the dev,putting build action on non existent branches for debug
-#     branches: ['master', 'main']
-#     types: ['opened', 'reopened']
-#     paths-ignore:
-#       - .vscode/**
-#       - .gitignore
-#       - LICENSE
-#       - README.md
-#       - code_of_conduct.md
+#   push:
+#     branches: ['master', 'main', 'feat/build-docker']
+
+on:
+  pull_request:
+    # debug: remove the dev,putting build action on non existent branches for debug
+    branches: ['main']
+    types: ['opened', 'reopened']
+    paths-ignore:
+      - .vscode/**
+      - .gitignore
+      - LICENSE
+      - readme.md
+      - code_of_conduct.md
+      - cicd/**
+      - scripts/**
+      - .flake8
+      - COMPLIANCE.yaml
+      - requirements-dev.txt
 
 jobs:
   # This workflow contains a single job called "build"
