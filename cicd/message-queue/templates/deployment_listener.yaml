@@ -1,0 +1,48 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  annotations:
+    app.openshift.io/vcs-uri: 'https://github.com/bcgov/nr-rfc-grib-copy'
+  name:  {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}
+  labels:
+    app: {{ .Values.app.name }}-{{ .Values.app.zone }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}-{{ .Values.app.zone }}
+      #env: {{ .Values.env }}
+      #deployment: {{ .Values.app_name }}-deploy
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}-{{ .Values.app.zone }}
+        deployment: {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}
+    spec:
+      # imagePullSecrets:
+      #   - name: deployer-token-klpcz
+      containers:
+        - name: {{ .Values.app.name }}
+        # - image: ${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}
+          image: >-
+            {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+        # ghcr.io/bcgov/datamart_listener:{{ .Values.image_tag }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          imagePullPolicy: Always
+          env: []
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+      imagePullSecrets: []
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  paused: false

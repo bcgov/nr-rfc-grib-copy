@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  labels:
+    template: quickstart-network-security-policy
+    app: {{ .Values.app.name }}-{{ .Values.app.zone }}
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - podSelector: {}
+  policyTypes:
+    - Ingress
