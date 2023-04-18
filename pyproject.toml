@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra -q ", "backend"]
+testpaths = [
+    "backend", "tests",
+]
+pythonpath = ["backend", "scripts"]
+log_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s"
+log_cli = 1
