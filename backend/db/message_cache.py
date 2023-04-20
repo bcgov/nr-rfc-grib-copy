@@ -22,7 +22,7 @@ import logging
 import db.model
 import util.config
 import util.grib_file_config
-from sqlalchemy import create_engine, delete
+from sqlalchemy import create_engine, delete, inspect
 from sqlalchemy.orm import sessionmaker
 
 LOGGER = logging.getLogger(__name__)
@@ -34,10 +34,14 @@ class MessageCache:
         # on local vs deployed
         if not db_str:
             db_str = util.config.get_db_string()
+
         self.db_str = db_str
         LOGGER.debug(f"db connection string: {db_str}")
 
+
         self.engine = create_engine(db_str, echo=False)
+        self.init_db()
+
         self.session_maker = sessionmaker(autocommit=False,
                                           autoflush=False,
                                           bind=self.engine)
@@ -47,8 +51,8 @@ class MessageCache:
 
         # data is collected daily so can use the date to identify a collection
         # of data
-        self.current_idempotency_key = datetime.datetime.now().strftime(
-            util.config.default_datestring_format)
+        self.current_idempotency_key = None
+        self.current_idempotency_key = self.get_current_idempotency_key()
 
         # make sure the idempotency_key is in the in memory struct
         if self.current_idempotency_key not in self.cached_events:
@@ -56,8 +60,32 @@ class MessageCache:
 
         grib_config = util.grib_file_config.GribFiles()
 
+        # getting a list of files that are expected per idem key
         self.expected_data = grib_config.calculate_expected_file_list(
             only_file_path=True)
+
+    def init_db(self):
+        """ if the database doesn't have the tables in it, then create them
+        """
+        inspector = inspect(self.engine)
+        table_names = inspector.get_table_names()
+        LOGGER.debug(f"table names: {table_names}")
+
+        # check to see if the expected table exists in the db.
+        if db.model.Events.__tablename__ not in table_names:
+            LOGGER.info("Creating the database tables")
+            db.model.Base.metadata.create_all(bind=self.engine)
+
+    def get_current_idempotency_key(self):
+        """because the data is available daily, using the date stamp as the
+        idempotency key.  This is going to return the current datetime string
+        in the format used for idempotency keys.
+        """
+        cur_idem_key = self.current_idempotency_key
+        if not cur_idem_key:
+            cur_idem_key = datetime.datetime.now().strftime(
+                util.config.default_datestring_format)
+        return cur_idem_key
 
     def cache_event(self, msg, idem_key=None):
         # event = model.Events(event_message=msg_text)

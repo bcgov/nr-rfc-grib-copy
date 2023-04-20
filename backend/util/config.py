@@ -33,9 +33,15 @@ def get_db_string(ignore_env=False):
     """
     local_dir = os.path.dirname(__file__)
     local_db_path = os.path.realpath(os.path.join(local_dir, '..', '..', event_db_file_name))
-    db_str = local_db_path
+    local_db_path = f"sqlite:///{local_db_path}"
+
     if not ignore_env:
         db_str = os.getenv('DB_FILE_PATH', local_db_path)
+
+    # example connection string
+    # sqlite:///C:\\sqlitedbs\\school.db
+    # sqlite:////path/to/file.db
+
     return db_str
 
 def get_amqp_queue_name():

@@ -5,6 +5,7 @@ import urllib.parse
 import db.message_cache
 import db.model as model
 import pytest
+import util.grib_file_config
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import session, sessionmaker
@@ -116,3 +117,9 @@ def message_cache_instance_with_data(message_cache_instance):
         from sqlalchemy import delete
         stmt = delete(model.Events).where(model.Events.event_message.in_([msg1, msg2]))
         session.execute(stmt)
+
+
+@pytest.fixture(scope="function")
+def grib_config_files():
+    gf = util.grib_file_config.GribFiles()
+    yield gf

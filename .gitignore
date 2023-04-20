@@ -15,3 +15,4 @@ cansips_forecast_raw_latlon1.0x1.0_TMP_TGL_2m_2023-02_allmembers.grib2
 scripts/src/wgrib2/
 message.log
 test_oc/
+event_database.db

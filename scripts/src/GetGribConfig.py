@@ -466,6 +466,9 @@ class GribConfigCollection:
     def __init__(self):
         self.cls_dict = self._get_class_dict()
 
+    def get_class_dict(self):
+        return self.cls_dict
+
     def _get_class_dict(self):
         """returns a list of class instances that are subclasses from
         abc.ABCMeta, ie those that contain actual config implementations that

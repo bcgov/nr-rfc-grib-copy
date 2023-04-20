@@ -6,10 +6,11 @@ import os
 # correct places
 import sys
 
+import messaging.cmc_grib_callbacks
 import messaging.MSCDataMartSubscriber
 import util.config as config
 import util.file_path_config as file_path_config
-
+import util.grib_file_config as grib_file_config
 
 log_file_path = file_path_config.get_log_config_file_path()
 print(f'log_file_path: {log_file_path}')
@@ -29,10 +30,14 @@ datamart_listener = messaging.MSCDataMartSubscriber.MSCDataMartSubscriber(
     queue_name=q_name
 )
 
-# need to get these from the GetGribConfig.py
-topic_string_1 = 'v02.post.*.WXO-DD.model_gem_regional.10km.grib2//*/#'
-topic_string_2 = 'v02.post.*.MSC-SAT.#'
+# get and add topic strings to the listener channel
+grib_config = grib_file_config.GribFiles()
+topic_strings = grib_config.get_all_topic_strings()
+for topic_string in topic_strings:
+    datamart_listener.add_topic(topic_string)
 
-# topic_str =
 
-# datamart_listener.add_topic()
+# start the listener with the callback
+callbacks = messaging.cmc_grib_callbacks.CMC_Grib_Callback()
+
+datamart_listener.start_listening(callback=callbacks.cmc_callback)

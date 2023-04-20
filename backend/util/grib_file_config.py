@@ -53,7 +53,8 @@ class GribFiles:
                       etc....
         """
         file_list = []
-        config_class_names_list = self.gribcollection.cls_dict.keys()
+        class_dict = self.gribcollection.get_class_dict()
+        config_class_names_list = class_dict.keys()
         for config_class in config_class_names_list:
             LOGGER.debug(f"config_class name: {config_class}")
             config_instance = self.gribcollection.cls_dict[config_class]
@@ -124,4 +125,20 @@ class GribFiles:
                 property_list.append(prop[0])
         return property_list
 
+    def get_all_topic_strings(self):
+        """reads the various grib config files and retrieves the topic strings
+        and returns them as a list.  The topic strings are the specific format
+        used to identify what the listener should be listening to when creating
+        a subscription to the message queue.
 
+        Follows the format described here:
+        https://samuelguay.ca/open-data/msc-datamart/amqp_en/#contact-us
+
+        """
+        topic_strings = []
+        class_dict = self.gribcollection.get_class_dict()
+
+        for config_class in class_dict.keys():
+            instance = class_dict[config_class]
+            topic_strings.append(instance.amqp_topic_pattern)
+        return topic_strings

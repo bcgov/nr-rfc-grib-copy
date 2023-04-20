@@ -15,7 +15,7 @@ Notes on configurations required for a deployment
 
 * DB_FILE_PATH: the path that you want to use for the sqlite database file, if
                 not provided the location will be the root folder for the
-                application.
+                application.  
 
 * CLOUDAMQP_URL: (optional) a amqp connections string in the format:
                  amqps://user:password@host/?params.  If this parameter is
