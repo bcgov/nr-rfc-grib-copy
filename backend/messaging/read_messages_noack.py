@@ -3,8 +3,6 @@ import os
 
 import pika
 
-
-
 # configure root logger
 RLOG = logging.getLogger()
 RLOG.setLevel(logging.INFO)
@@ -22,7 +20,7 @@ LOGGER.setLevel(logging.DEBUG)
 url = os.environ.get('CLOUDAMQP_URL', f'amqps://anonymous:anonymous@hpfx.collab.science.gc.ca/?heartbeat=600&blocked_connection_timeout=300')
 url_params = pika.URLParameters(url)
 
-
+fh = None
 """
 
 2023-04-17 20:33:42,767 - __main__ - INFO - 25 - [x] Received 20230417203341.618 https://hpfx.collab.science.gc.ca /20230417/WXO-DD/observations/swob-ml/20230417/CPRJ/2023-04-17-2033-CPRJ-AUTO-minute-swob.xml
@@ -64,7 +62,8 @@ def message_callback_regional_gems(ch, method, properties, body):
     :param properties: _description_
     :param body: _description_
     """
-    msg = f" [x] Received {body.decode()}"
+    msg_body = body.decode()
+    msg = f" [x] Received {msg_body}"
 
     LOGGER.info(msg)
     LOGGER.info(" [x] Done")
@@ -79,6 +78,11 @@ def message_callback_regional_gems(ch, method, properties, body):
     # then when all the data that we are looking to recieve is available
     # trigger the download
 
+    global fh
+    msg_list = msg_body.split(' ')
+    fh.write(msg_list[2] + '\n')
+    fh.flush()
+
 
 
 try:
@@ -86,18 +90,26 @@ try:
     connection = pika.BlockingConnection(url_params)
     channel = connection.channel() # start a channel
 
-    q_name = 'q_anonymous.bcgov_rfc.testing' # 10km/grib2/06
-    topic_string = 'v02.post.*.WXO-DD.#'
+    q_name = 'q_anonymous.bcgov_rfc.testing_123' # 10km/grib2/06
+    topic_string_1 = 'v02.post.*.WXO-DD.#'
+    topic_string_2 = 'v02.post.*.MSC-SAT.#'
+
+    fh = open('message.log', 'a')
+
 
     channel.queue_declare(queue=q_name, durable=True)
     channel.queue_bind(
-         exchange='xpublic', queue=q_name, routing_key=topic_string)
+         exchange='xpublic', queue=q_name, routing_key=topic_string_1)
+    channel.queue_bind(
+         exchange='xpublic', queue=q_name, routing_key=topic_string_2)
+
     LOGGER.debug(f"created channel and queue name: {q_name}")
-    channel.basic_consume(queue=q_name, on_message_callback=message_callback, auto_ack=False)
+    channel.basic_consume(queue=q_name, on_message_callback=message_callback_regional_gems, auto_ack=False)
     LOGGER.debug("consuming...")
     channel.start_consuming()
 
 except KeyboardInterrupt:
 
     channel.queue_delete(q_name)
+    fh.close()
     channel.close()

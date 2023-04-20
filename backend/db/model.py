@@ -35,3 +35,4 @@ class Events(Base):
     event_id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
     event_message = Column(String(200), nullable=False)
     event_timestmp = Column(DateTime(timezone=True), server_default=func.now())
+    event_idempotency_key = Column(String(50), nullable=False)

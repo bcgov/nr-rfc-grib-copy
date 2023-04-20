@@ -61,6 +61,11 @@ class GribConfig(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @property
+    @abc.abstractmethod
+    def amqp_topic_pattern(self):
+        raise NotImplementedError
+
+    @property
     def datestr(self):
         now = datetime.datetime.now(self.timezone)
         datestr = now.strftime(self.date_str_format)
@@ -212,6 +217,7 @@ class WGribExtractParams:
             raise InvalidExtractCodeError(extract_code)
         return extract_dict
 
+
 class InvalidExtractCodeError(Exception):
     def __init__(self, extract_code):
         self.message = (
@@ -245,7 +251,8 @@ class GribRegional_1(GribConfig):
     '''
     model_number = "06"
     extract_code = "P"
-    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_regional.10km.grib2.*.*.#'
     date_str_format = "%Y%m%d"
     iteratorlist = list(range(2, 84))
     file_template = "CMC_reg_PRATE_SFC_0_ps10km_{datestr}{model_number}_P{iterator}.grib2"
@@ -279,7 +286,8 @@ class GribRegional_2(GribConfig):
     '''
     model_number = "06"
     extract_code = "T"
-    url_template = "http://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_regional.10km.grib2.*.*.#'
     iteratorlist = list(range(0, 84))
     date_str_format = "%Y%m%d"
     file_template = "CMC_reg_TMP_TGL_2_ps10km_{datestr}{model_number}_P{iterator}.grib2"
@@ -357,9 +365,13 @@ class GribGlobal_1(GribConfig):
     model_number = "00"
     iteratorlist = list(range(90,241,3))
     file_template = "CMC_glb_PRATE_SFC_0_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
     url_template = (
-        "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+        "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
     )
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
     date_str_format = "%Y%m%d"
     timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
     extract_code = "P"
@@ -438,9 +450,13 @@ class GribGlobal_2(GribConfig):
     iteratorlist = list(range(90,241,3))
     iteratorlist.extend(list(range(6, 16, 3))) # these are added on and used in model for bias correction
     file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
     url_template = (
-        "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+        "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
     )
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
     date_str_format = "%Y%m%d"
     timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
     extract_code = "T"
@@ -448,21 +464,33 @@ class GribGlobal_2(GribConfig):
 
 class GribConfigCollection:
     def __init__(self):
-        self.cls_dict = self.get_class_list()
+        self.cls_dict = self._get_class_dict()
 
-    def get_class_list(self):
+    def _get_class_dict(self):
         """returns a list of class instances that are subclasses from
-        abc.ABCMeta, ie those that contain actual config implementations
+        abc.ABCMeta, ie those that contain actual config implementations that
+        inherit from an abstract base class
         """
         class_dict = {}
         module_name = __name__
         LOGGER.debug(f"module name: {module_name}")
         clsmembers = inspect.getmembers(sys.modules[module_name], inspect.isclass)
+
         for cls_mem in clsmembers:
             class_name = cls_mem[0]
             class_inst = cls_mem[1]
-            if cls_mem[1].__class__ is abc.ABCMeta:
-                class_dict[class_name] = class_inst
+            constructor = globals()[class_name]
+
+
+            # example of how to instantiate a class when its name
+            # is in string variable
+            # id = "1234asdf"
+            # constructor = globals()[id]
+            # instance = constructor()
+
+
+            if cls_mem[1].__class__ is abc.ABCMeta and not inspect.isabstract(class_inst):
+                class_dict[class_name] = constructor()
         return class_dict
 
 

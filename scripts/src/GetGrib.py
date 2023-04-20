@@ -7,14 +7,15 @@ import os
 import subprocess
 import sys
 
-import requests
-
 import config
 import GetGribConfig
 import ObjectStore
+import requests
 
 LOGGER = logging.getLogger(__name__)
 
+# TODO: some of the functionality here is defined in grib_file_config module
+#       in the backend.  Should use that func vs what is in here
 
 class GetGrib:
     def __init__(self, dest_folder:str, config: GetGribConfig.GribConfig):

@@ -1,9 +1,11 @@
 import logging
 import os
+import urllib.parse
 
+import db.message_cache
 import db.model as model
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import session, sessionmaker
 
@@ -45,17 +47,30 @@ def db_session(db_session_maker: sessionmaker, dbEngine) -> session:
     # transaction.rollback()
     connection.close()
 
+@pytest.fixture(scope="module")
+def db_connection_string():
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./test_db.db"
+    LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")
+    yield SQLALCHEMY_DATABASE_URL
 
 @pytest.fixture(scope="module")
-def dbEngine() -> Engine:
+def dbEngine(db_connection_string) -> Engine:
+
+    # urllib.parse
+    urlib_obj = urllib.parse.urlparse(db_connection_string)
+    dbPath = urlib_obj.path
+    # remove leading /
+    dbPath = dbPath[1:]
+    LOGGER.debug(f"dbPath: {dbPath}")
+
     # should re-create the database every time the tests are run, the following
     # line ensure database that maybe hanging around as a result of a failed
     # test is deleted
-    if os.path.exists("./test_db.db"):
-        LOGGER.debug("remove the database: ./test_db.db'")
+    if os.path.exists(dbPath):
+        LOGGER.debug(f"remove the database: {dbPath}")
         # os.remove("./test_db.db")
 
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test_db.db"
+    SQLALCHEMY_DATABASE_URL = db_connection_string
     LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")
     execution_options = {"schema_translate_map": {"app_fam": None}}
 
@@ -74,6 +89,30 @@ def dbEngine() -> Engine:
     # delete the test database
 
     model.Base.metadata.drop_all(engine)
-    if os.path.exists("./test_db.db"):
-        LOGGER.debug("remove the database: ./test_db.db'")
-        os.remove("./test_db.db")
+    if os.path.exists(dbPath):
+        LOGGER.debug(f"remove the database: {dbPath}")
+        os.remove(dbPath)
+
+@pytest.fixture(scope="function")
+def message_cache_instance(db_connection_string, dbEngine):
+    # turn down logging in specific modules
+    logging.getLogger("util.grib_file_config").setLevel(logging.INFO)
+
+    mc = db.message_cache.MessageCache(db_str=db_connection_string)
+    # replace the engine with the one that is gonna get cleaned up...
+    #mc.db = dbEngine
+    yield mc
+
+@pytest.fixture(scope="function")
+def message_cache_instance_with_data(message_cache_instance):
+    mc = message_cache_instance
+    msg1 = 'junk 1 message'
+    msg2 = 'junk 2 message'
+    mc.cache_event(msg=msg1)
+    mc.cache_event(msg=msg2)
+    yield mc
+
+    with mc.session_maker() as session:
+        from sqlalchemy import delete
+        stmt = delete(model.Events).where(model.Events.event_message.in_([msg1, msg2]))
+        session.execute(stmt)

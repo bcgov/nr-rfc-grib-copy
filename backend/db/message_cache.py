@@ -15,42 +15,141 @@ been cached.
 
 """
 
-from sqlalchemy import create_engine
+import collections
+import datetime
+import logging
+
+import db.model
+import util.config
+import util.grib_file_config
+from sqlalchemy import create_engine, delete
+from sqlalchemy.orm import sessionmaker
+
+LOGGER = logging.getLogger(__name__)
 
 
 class MessageCache:
-    def __init__(self):
+    def __init__(self, db_str=None):
         # db file location should come from an env var, different depending
         # on local vs deployed
-        self.db = create_engine("sqlite://", echo=True)
-        pass
+        if not db_str:
+            db_str = util.config.get_db_string()
+        self.db_str = db_str
+        LOGGER.debug(f"db connection string: {db_str}")
 
-    def cache_event(self, msg):
-        pass
+        self.engine = create_engine(db_str, echo=False)
+        self.session_maker = sessionmaker(autocommit=False,
+                                          autoflush=False,
+                                          bind=self.engine)
 
-    def is_event_of_intestest(self, msg):
+        # now load any cached events from the database into memory
+        self.cached_events = self.get_cached_events_as_struct()
+
+        # data is collected daily so can use the date to identify a collection
+        # of data
+        self.current_idempotency_key = datetime.datetime.now().strftime(
+            util.config.default_datestring_format)
+
+        # make sure the idempotency_key is in the in memory struct
+        if self.current_idempotency_key not in self.cached_events:
+            self.cached_events[self.current_idempotency_key] = []
+
+        grib_config = util.grib_file_config.GribFiles()
+
+        self.expected_data = grib_config.calculate_expected_file_list(
+            only_file_path=True)
+
+    def cache_event(self, msg, idem_key=None):
+        # event = model.Events(event_message=msg_text)
+        # db_session.add(event)
+        if idem_key is None:
+            idem_key = self.current_idempotency_key
+
+        event_record = db.model.Events(
+            event_message=msg,
+            event_idempotency_key=idem_key
+            )
+
+        with self.session_maker() as session:
+            session.add(event_record)
+            session.commit()
+            # add to in memory struct
+            if idem_key not in self.cached_events:
+                self.cached_events[idem_key] = []
+            self.cached_events[idem_key].append(msg)
+
+    def is_event_of_interest(self, msg):
         """
         is the event one that we are interested in, ie does it correspond
         with a piece of information that we are wanting to download
         """
-        pass
+        is_of_interest = False
+        if msg in self.expected_data:
+            is_of_interest = True
+        return is_of_interest
 
-    def is_all_data_there(self):
+    def is_all_data_there(self, idemkey=None):
         """
         returns a boolean value indicating if all the data we are attempting
         to download is available.
         """
-        pass
+        if idemkey is None:
+            idemkey = self.current_idempotency_key
 
-    def get(self):
-        """returns a cache of all the data that currently exists in our
-        cache of events.
-        """
-        pass
+        all_there = False
+        if len(self.cached_events[idemkey]) == len(self.expected_data):
+            # now see if the actual data is the same.
+            if (
+                    collections.Counter(self.cached_events[idemkey])
+                    ==
+                    collections.Counter(self.expected_data)
+                ):
+                all_there = True
+        return all_there
 
-    def clear_cache(self):
+    def clear_cache(self, idemkey=None):
         """when all the data we are expecting has been provided and passed on
         to the next process we will need to clear the cache.  That is what
         this method will do.
         """
-        pass
+        if idemkey is None:
+            idemkey = self.current_idempotency_key
+
+        # first get rid fo the database records
+        with self.session_maker() as session:
+            stmt = delete(db.model.Events).where(db.model.Events.event_idempotency_key.in_([idemkey]))
+            LOGGER.debug(f"delete stmt: {stmt}")
+            #stmt = delete(db.model.Events).all()
+            session.execute(stmt)
+            session.commit()
+
+        # now get rid of the in memory struct
+        if idemkey in self.cached_events:
+            del self.cached_events[idemkey]
+
+    def get_cached_events_as_struct(self):
+        """
+        queries the db for all the events then assembled a data structure like:
+        struct:
+            <idempotency_key>
+                event
+                event
+                event
+                ...
+
+        """
+        struct = {}
+        events_result_set = self.get_cached_events()
+        for event in events_result_set:
+            if event.event_idempotency_key not in struct:
+                struct[event.event_idempotency_key] = []
+            struct[event.event_idempotency_key].append(event.event_message)
+        return struct
+
+    def get_cached_events(self):
+        """retrieves all the events from the database
+        """
+        result_set = None
+        with self.session_maker() as session:
+            result_set = session.query(db.model.Events).all()
+        return result_set

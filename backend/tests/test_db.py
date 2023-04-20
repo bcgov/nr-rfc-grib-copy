@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import db.model as model
@@ -14,7 +15,9 @@ def test_db_events(db_session):
     """
 
     msg_text = 'test message 1 2 3'
-    event = model.Events(event_message=msg_text)
+    date_string = datetime.datetime.now().strftime('%Y%m%d')
+
+    event = model.Events(event_message=msg_text, event_idempotency_key=date_string)
     db_session.add(event)
     db_session.flush()
     event_db_rec = db_session.query(model.Events).filter_by(
@@ -24,3 +27,26 @@ def test_db_events(db_session):
     LOGGER.debug(f'pk record: {event_db_rec[0].event_id}')
     LOGGER.debug(f'message: {event_db_rec[0].event_message}')
     assert event_db_rec[0].event_message == msg_text
+
+    # add a new record
+    msg_text = 'another message'
+    event = model.Events(event_message=msg_text, event_idempotency_key=date_string)
+    db_session.add(event)
+    db_session.flush()
+    event_db_recs = db_session.query(model.Events).filter_by(
+        event_idempotency_key=date_string).all()
+    assert len(event_db_recs) == 2
+    # extract the messages
+    msg_list = [event.event_message for event in event_db_recs]
+    assert msg_text in msg_list
+
+    # test generic query all
+    all_event_recs = db_session.query(model.Events).all()
+    assert len(all_event_recs) == 2
+
+    all_event_recs_as_list_dict = []
+    for rec in all_event_recs:
+        as_dict = rec.__dict__
+        del as_dict['_sa_instance_state']
+        all_event_recs_as_list_dict.append(as_dict)
+    LOGGER.debug(f"all_event_recs_as_dict: {all_event_recs_as_list_dict}")
