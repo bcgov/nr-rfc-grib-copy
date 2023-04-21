@@ -21,17 +21,40 @@ spec:
     spec:
       # imagePullSecrets:
       #   - name: deployer-token-klpcz
+      volumes:
+        - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
       containers:
         - name: {{ .Values.app.name }}
-        # - image: ${NAME}-${ZONE}-${COMPONENT}:${IMAGE_TAG}
           image: >-
             {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
-        # ghcr.io/bcgov/datamart_listener:{{ .Values.image_tag }}
           ports:
             - containerPort: 8080
               protocol: TCP
           imagePullPolicy: Always
-          env: []
+          env:
+            - name: DB_FILE_PATH
+              value: "sqlite:////data/event_database.db"
+            - name: AMPQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+                  key: ampq_username
+            - name: AMPQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name:  {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+                  key: ampq_password
+            - name: AMPQ_DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+                  key: domain
+          volumeMounts:
+            - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+              mountPath: {{ .Values.app.pvc_mount_point }}
+
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst

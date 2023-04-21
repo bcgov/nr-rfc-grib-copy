@@ -78,6 +78,7 @@ app:
   # TODO: look up how to have a parameter that needs to be provided when chart
   #       gets run
   zone: pr-999
+  pvc_mount_point: /data
 
 image:
   # image_tag: 20230412-2139
@@ -96,9 +97,10 @@ config:
   min_replicas: "2"
   max_replicas: 5
 
+pvc:
+  size: 50Mi
 
-# # ------------------------------
-
-# app_name: amqp-listener
-# role: web
-# env: dev
+ampq_secrets:
+  username: anonymous
+  password: anonymous
+  domain: hpfx.collab.science.gc.ca
