@@ -1,0 +1,5 @@
+backend/messaging/examples/
+backend/tests/
+backend/requirements-dev.txt
+__pycache__
+*.pyc

@@ -1,19 +1,15 @@
-# Default values for message_queue.
+# Default values for message-queue.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
 
-image:
-  repository: nginx
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: "" # used by _helpers.tpl to define message-queue.fullname
+fullnameOverride: "" # used by _helpers.tpl to define message-queue.fullname
 
+# referenced by _helpers.tpl
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -23,23 +19,12 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-podAnnotations: {}
-
-podSecurityContext: {}
-  # fsGroup: 2000
-
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
-
+# referenced by NOTES.txt
 service:
   type: ClusterIP
   port: 80
 
+# referenced by NOTES.txt
 ingress:
   enabled: false
   className: ""
@@ -80,3 +65,42 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+
+# -------------------------------------------------
+
+app:
+  # Module name
+  name: messagesubscriber
+  # Component name: backend, frontend, database, etc...
+  component: listener
+  # Deployment zone, e.g. pr-### or prod
+  # TODO: look up how to have a parameter that needs to be provided when chart
+  #       gets run
+  zone: pr-999
+  pvc_mount_point: /data
+
+image:
+  # image_tag: 20230412-2139
+  image_tag: latest
+  # ???
+  domain: apps.silver.devops.gov.bc.ca
+  registry:  ghcr.io
+  #promote: bcgov/nr-rfc-grib-copy/datamart_listener:prod
+  promote: bcgov/datamart_listener:20230412-2139
+
+config:
+  cpu_request: "25m"
+  memory_request: "50Mi"
+  cpu_limit: "75m"
+  memory_limit: "150Mi"
+  min_replicas: "2"
+  max_replicas: 5
+
+pvc:
+  size: 50Mi
+
+ampq_secrets:
+  username: anonymous
+  password: anonymous
+  domain: hpfx.collab.science.gc.ca

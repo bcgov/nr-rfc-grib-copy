@@ -1,38 +1,43 @@
-import asyncio
 import logging
+import logging.config
+import os
 
-import nest_asyncio
-from fastapi import FastAPI
+# follows is a hack for local dev, the dockerfile should add the files in the
+# correct places
+import sys
 
-# from app.messaging.messagehandler import MessageHandler
+import messaging.cmc_grib_callbacks
+import messaging.MSCDataMartSubscriber
+import util.config as config
+import util.file_path_config as file_path_config
+import util.grib_file_config as grib_file_config
 
-app = FastAPI(title="Consumer Python", version="0.0.1")
-# jsMsgHandler = MessageHandler("EVENTS-TOPIC", "consumer-python", "consumer-python")
+log_file_path = file_path_config.get_log_config_file_path()
+print(f'log_file_path: {log_file_path}')
+logging.config.fileConfig(log_file_path)
+
+LOGGER = logging.getLogger(__name__)
+
+LOGGER.debug("first message")
+
+q_name = config.get_amqp_queue_name()
+exchange_name = config.get_amqp_exchange_name()
+ampq_url = config.get_amqp_url()
+
+datamart_listener = messaging.MSCDataMartSubscriber.MSCDataMartSubscriber(
+    ampq_url=ampq_url,
+    exchange_name=exchange_name,
+    queue_name=q_name
+)
+
+# get and add topic strings to the listener channel
+grib_config = grib_file_config.GribFiles()
+topic_strings = grib_config.get_all_topic_strings()
+for topic_string in topic_strings:
+    datamart_listener.add_topic(topic_string)
 
 
-# Define the filter
-class EndpointFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.args and len(record.args) >= 3 and record.args[2] != "/"
+# start the listener with the callback
+callbacks = messaging.cmc_grib_callbacks.CMC_Grib_Callback()
 
-
-# Add filter to the logger
-logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
-
-
-# async def connect():
-#     await jsMsgHandler.connect()
-
-
-# nest_asyncio.apply()
-# asyncio.run(connect())
-
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+datamart_listener.start_listening(callback=callbacks.cmc_callback)

@@ -1,4 +1,4 @@
-name: build listener image
+name: Build listener image
 
 # used on push for testing / development
 # on:
