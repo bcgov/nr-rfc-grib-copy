@@ -15,7 +15,9 @@ def test_get_db_string_local():
         os.path.dirname(__file__),
         '..', '..',
         config.event_db_file_name))
-    db_str = os.path.realpath(db_str)
+    expected_str = f'sqlite:///{expected_str}'
+    #db_str = os.path.realpath(db_str)
+    LOGGER.debug(f"expected_str: {expected_str}")
     assert db_str == expected_str
 
 

@@ -17,8 +17,7 @@ print(f'log_file_path: {log_file_path}')
 logging.config.fileConfig(log_file_path)
 
 LOGGER = logging.getLogger(__name__)
-
-LOGGER.debug("first message")
+LOGGER.info(f"log config: {log_file_path}")
 
 q_name = config.get_amqp_queue_name()
 exchange_name = config.get_amqp_exchange_name()
@@ -33,9 +32,11 @@ datamart_listener = messaging.MSCDataMartSubscriber.MSCDataMartSubscriber(
 # get and add topic strings to the listener channel
 grib_config = grib_file_config.GribFiles()
 topic_strings = grib_config.get_all_topic_strings()
+# don't want duplicates
+topic_strings = list(set(topic_strings))
 for topic_string in topic_strings:
+    LOGGER.debug(f"topic string: {topic_string}")
     datamart_listener.add_topic(topic_string)
-
 
 # start the listener with the callback
 callbacks = messaging.cmc_grib_callbacks.CMC_Grib_Callback()

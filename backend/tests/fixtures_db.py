@@ -11,6 +11,7 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import session, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
+test_db_file = "./test_db.db"
 
 
 # This @event is important. By default FOREIGN KEY constraints have no effect
@@ -48,15 +49,25 @@ def db_session(db_session_maker: sessionmaker, dbEngine) -> session:
     # transaction.rollback()
     connection.close()
 
+
 @pytest.fixture(scope="module")
 def db_connection_string():
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test_db.db"
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{test_db_file}"
     LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")
     yield SQLALCHEMY_DATABASE_URL
 
 @pytest.fixture(scope="module")
-def dbEngine(db_connection_string) -> Engine:
+def db_connection_string_operation_data():
+    test_db_file = './backend/tests/test_data/event_database.db'
+    test_db_file = os.path.realpath(test_db_file)
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{test_db_file}"
+    LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")
+    yield SQLALCHEMY_DATABASE_URL
 
+
+
+@pytest.fixture(scope="module")
+def dbEngine(db_connection_string) -> Engine:
     # urllib.parse
     urlib_obj = urllib.parse.urlparse(db_connection_string)
     dbPath = urlib_obj.path
@@ -94,8 +105,10 @@ def dbEngine(db_connection_string) -> Engine:
         LOGGER.debug(f"remove the database: {dbPath}")
         os.remove(dbPath)
 
+
 @pytest.fixture(scope="function")
 def message_cache_instance(db_connection_string, dbEngine):
+    #TODO: do we need the engine?
     # turn down logging in specific modules
     logging.getLogger("util.grib_file_config").setLevel(logging.INFO)
 
@@ -105,16 +118,33 @@ def message_cache_instance(db_connection_string, dbEngine):
     yield mc
 
 @pytest.fixture(scope="function")
+def message_cache_instance_operation_data(db_connection_string_operation_data):
+    # execution_options = {"schema_translate_map": {"app_fam": None}}
+    db_conn_str = db_connection_string_operation_data
+    # engine = create_engine(
+    #     db_conn_str,
+    #     connect_args={"check_same_thread": False}
+    # )
+    # execution_options=execution_options,
+    mc = db.message_cache.MessageCache(db_str=db_conn_str)
+
+    # turn down logging in specific modules
+    logging.getLogger("util.grib_file_config").setLevel(logging.INFO)
+    yield mc
+
+
+@pytest.fixture(scope="function")
 def message_cache_instance_with_data(message_cache_instance):
     mc = message_cache_instance
-    msg1 = 'junk 1 message'
-    msg2 = 'junk 2 message'
+    msg1 = "junk 1 message"
+    msg2 = "junk 2 message"
     mc.cache_event(msg=msg1)
     mc.cache_event(msg=msg2)
     yield mc
 
     with mc.session_maker() as session:
         from sqlalchemy import delete
+
         stmt = delete(model.Events).where(model.Events.event_message.in_([msg1, msg2]))
         session.execute(stmt)
 

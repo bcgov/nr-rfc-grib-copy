@@ -37,6 +37,8 @@ def get_db_string(ignore_env=False):
 
     if not ignore_env:
         db_str = os.getenv('DB_FILE_PATH', local_db_path)
+    else:
+        db_str = local_db_path
 
     # example connection string
     # sqlite:///C:\\sqlitedbs\\school.db
