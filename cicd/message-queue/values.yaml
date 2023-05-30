@@ -81,13 +81,12 @@ app:
   pvc_mount_point: /data
 
 image:
-  # image_tag: 20230412-2139
-  image_tag: latest
-  # ???
+  # image_tag: 20230412-2139 20230421-1758
+  image_tag: 20230421-1758
   domain: apps.silver.devops.gov.bc.ca
   registry:  ghcr.io
   #promote: bcgov/nr-rfc-grib-copy/datamart_listener:prod
-  promote: bcgov/datamart_listener:20230412-2139
+  promote: bcgov/datamart_listener:20230421-1758
 
 config:
   cpu_request: "25m"

@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import db.model as model
+import pytest
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +50,29 @@ def test_is_all_data_there(message_cache_instance):
     mc.cached_events[mc.current_idempotency_key].append(value)
     assert mc.is_all_data_there()
 
+def test_is_all_data_there_operational_data(message_cache_instance_operation_data):
+    mc = message_cache_instance_operation_data
+    data_there = mc.is_all_data_there(idemkey='20230422')
+    LOGGER.debug(f"data_there: {data_there}")
+
+# args fixture_name, test params, indirect=True
+# @pytest.mark.parametrize()
+# def test_is_all_data_there_with_data(message_cache_instance_with_data):
+#     mc = message_cache_instance_with_data
+#     mc.is_all_data_there(idem_key='20230422')
+#     pass
+
+def test_cache_filter(message_cache_instance_operation_data):
+    # either this message isn't getting emitted, or the filter isn't
+    # letting it get logged
+    # '/20230422/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/090/CMC_glb_PRATE_SFC_0_latlon.15x.15_2023042200_P090.grib2'
+    #
+    # is_event_of_interest()
+    date_str = '20230526'
+    test_event = f'/{date_str}/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/090/CMC_glb_PRATE_SFC_0_latlon.15x.15_{date_str}00_P090.grib2'
+    mc = message_cache_instance_operation_data
+    is_of_interest = mc.is_event_of_interest(msg=test_event)
+    LOGGER.debug(f"test_event is of interest: {is_of_interest}")
 
 def test_clear_cache(message_cache_instance_with_data):
     mc = message_cache_instance_with_data

@@ -13,7 +13,7 @@
             "justMyCode": true
         },
         {
-            "name": "run main_cmc",
+            "name": "run cmc data process",
             "type": "python",
             "request": "launch",
             "program": "src/main_cmc.py",
@@ -30,6 +30,14 @@
             "justMyCode": false,
             "args" : ["noargs"]
         },
-
+        {
+            "name": "debug listener",
+            "type": "python",
+            "request": "launch",
+            "program": "backend/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args" : ["noargs"]
+        }
     ]
 }

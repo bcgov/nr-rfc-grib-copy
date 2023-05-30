@@ -50,10 +50,18 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
-                  key: domain
+                  key: ampq_server
           volumeMounts:
             - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
               mountPath: {{ .Values.app.pvc_mount_point }}
+          resources:
+            limits:
+              cpu: 100m
+              memory: 150Mi
+            requests:
+              cpu: 15m
+              memory: 75Mi
+
 
       restartPolicy: Always
       terminationGracePeriodSeconds: 30

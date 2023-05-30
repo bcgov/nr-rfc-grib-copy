@@ -31,7 +31,7 @@ class GribFiles:
 
         self.gribcollection = GetGribConfig.GribConfigCollection()
 
-    def calculate_expected_file_list(self, only_file_path=False):
+    def calculate_expected_file_list(self, only_file_path=False, date_str=None):
         """
         using the config calculates the path to the files that are required by
         the RFC to be downloaded when available.  The file path is also going
@@ -61,11 +61,12 @@ class GribFiles:
 
             iterator = config_instance.get_iterator()
             for iter in iterator:
-                url = self.get_url(config_instance, iterator=iter)
+                url = self.get_url(config_instance, iterator=iter, date_str=date_str)
                 LOGGER.debug(f"url: {url}")
                 src_file = self.get_src_file(
                     config_instance=config_instance,
-                    iterator=iter)
+                    iterator=iter,
+                    date_str=date_str)
                 full_url = os.path.join(url, src_file)
                 if only_file_path:
                     parse_obj = urllib.parse.urlparse(full_url)
@@ -75,13 +76,16 @@ class GribFiles:
 
             # now from the instance call methods to get file list
             LOGGER.debug(f"instance: {config_instance.model_number}")
+        LOGGER.info(f"expecting {len(file_list)} grib files to initiate processing")
         return file_list
 
-    def get_src_file(self, config_instance, iterator=None):
+    def get_src_file(self, config_instance, iterator=None, date_str=None):
         LOGGER.debug(f"iterator: {iterator}")
         fstring_properties = self.get_property_in_fstring(config_instance, config_instance.file_template)
         if iterator and 'iterator' in config_instance.file_template:
             fstring_properties['iterator'] = iterator
+        if date_str is not None and 'datestr' in fstring_properties:
+            fstring_properties['datestr'] = date_str
         LOGGER.debug(f"properties: {fstring_properties}")
         LOGGER.debug(f"fstring: {config_instance.file_template}")
         file_name = config_instance.file_template.format(**fstring_properties)
@@ -102,7 +106,7 @@ class GribFiles:
                 fstring_property_dict[prop] = getattr(config_instance, prop)
         return fstring_property_dict
 
-    def get_url(self, config_instance, iterator=None):
+    def get_url(self, config_instance, iterator=None, date_str=None):
         """templates can use any property that is populated in the class
         This method looks at what properties are required, and uses them
         to create the url string using the url format string.
@@ -110,6 +114,9 @@ class GribFiles:
         LOGGER.debug(f"iterator: {iterator}")
 
         fstring_properties = self.get_property_in_fstring(config_instance, config_instance.url_template)
+        if date_str is not None and 'datestr' in fstring_properties:
+            fstring_properties['datestr'] = date_str
+
         LOGGER.debug(f"fstring_properties: {fstring_properties}")
         if iterator and 'iterator' in config_instance.file_template:
             fstring_properties['iterator'] = iterator

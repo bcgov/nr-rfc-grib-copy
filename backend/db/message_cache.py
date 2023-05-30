@@ -38,13 +38,10 @@ class MessageCache:
         self.db_str = db_str
         LOGGER.debug(f"db connection string: {db_str}")
 
-
         self.engine = create_engine(db_str, echo=False)
         self.init_db()
 
-        self.session_maker = sessionmaker(autocommit=False,
-                                          autoflush=False,
-                                          bind=self.engine)
+        self.session_maker = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
         # now load any cached events from the database into memory
         self.cached_events = self.get_cached_events_as_struct()
@@ -58,15 +55,13 @@ class MessageCache:
         if self.current_idempotency_key not in self.cached_events:
             self.cached_events[self.current_idempotency_key] = []
 
-        grib_config = util.grib_file_config.GribFiles()
+        self.grib_config = util.grib_file_config.GribFiles()
 
         # getting a list of files that are expected per idem key
-        self.expected_data = grib_config.calculate_expected_file_list(
-            only_file_path=True)
+        self.expected_data = self.grib_config.calculate_expected_file_list(only_file_path=True)
 
     def init_db(self):
-        """ if the database doesn't have the tables in it, then create them
-        """
+        """if the database doesn't have the tables in it, then create them"""
         inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
         LOGGER.debug(f"table names: {table_names}")
@@ -75,6 +70,8 @@ class MessageCache:
         if db.model.Events.__tablename__ not in table_names:
             LOGGER.info("Creating the database tables")
             db.model.Base.metadata.create_all(bind=self.engine)
+        else:
+            LOGGER.info(f"db already there... table {db.model.Events.__tablename__} exists")
 
     def get_current_idempotency_key(self):
         """because the data is available daily, using the date stamp as the
@@ -83,8 +80,7 @@ class MessageCache:
         """
         cur_idem_key = self.current_idempotency_key
         if not cur_idem_key:
-            cur_idem_key = datetime.datetime.now().strftime(
-                util.config.default_datestring_format)
+            cur_idem_key = datetime.datetime.now().strftime(util.config.default_datestring_format)
         return cur_idem_key
 
     def cache_event(self, msg, idem_key=None):
@@ -93,10 +89,7 @@ class MessageCache:
         if idem_key is None:
             idem_key = self.current_idempotency_key
 
-        event_record = db.model.Events(
-            event_message=msg,
-            event_idempotency_key=idem_key
-            )
+        event_record = db.model.Events(event_message=msg, event_idempotency_key=idem_key)
 
         with self.session_maker() as session:
             session.add(event_record)
@@ -112,6 +105,7 @@ class MessageCache:
         with a piece of information that we are wanting to download
         """
         is_of_interest = False
+        #LOGGER.debug("input message: ")
         if msg in self.expected_data:
             is_of_interest = True
         return is_of_interest
@@ -123,16 +117,25 @@ class MessageCache:
         """
         if idemkey is None:
             idemkey = self.current_idempotency_key
+            expected_data = self.expected_data
+        else:
+            expected_data = self.grib_config.calculate_expected_file_list(
+                only_file_path=True, date_str=idemkey
+            )
 
-        all_there = False
-        if len(self.cached_events[idemkey]) == len(self.expected_data):
-            # now see if the actual data is the same.
-            if (
-                    collections.Counter(self.cached_events[idemkey])
-                    ==
-                    collections.Counter(self.expected_data)
-                ):
-                all_there = True
+        all_there = True
+        for expected_file in expected_data:
+            if expected_file not in self.cached_events[idemkey]:
+                all_there = False
+                break
+        # if len(self.cached_events[idemkey]) == len(self.expected_data):
+        #     # now see if the actual data is the same.
+        #     if (
+        #             collections.Counter(self.cached_events[idemkey])
+        #             ==
+        #             collections.Counter(self.expected_data)
+        #         ):
+        #         all_there = True
         return all_there
 
     def clear_cache(self, idemkey=None):
@@ -145,9 +148,11 @@ class MessageCache:
 
         # first get rid fo the database records
         with self.session_maker() as session:
-            stmt = delete(db.model.Events).where(db.model.Events.event_idempotency_key.in_([idemkey]))
+            stmt = delete(db.model.Events).where(
+                db.model.Events.event_idempotency_key.in_([idemkey])
+            )
             LOGGER.debug(f"delete stmt: {stmt}")
-            #stmt = delete(db.model.Events).all()
+            # stmt = delete(db.model.Events).all()
             session.execute(stmt)
             session.commit()
 
@@ -175,8 +180,7 @@ class MessageCache:
         return struct
 
     def get_cached_events(self):
-        """retrieves all the events from the database
-        """
+        """retrieves all the events from the database"""
         result_set = None
         with self.session_maker() as session:
             result_set = session.query(db.model.Events).all()
