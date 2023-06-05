@@ -6,8 +6,8 @@ replicaCount: 1
 
 
 imagePullSecrets: []
-nameOverride: "" # used by _helpers.tpl to define message-queue.fullname
-fullnameOverride: "" # used by _helpers.tpl to define message-queue.fullname
+nameOverride: ""
+fullnameOverride: "gov_can_message_queue_subscriber"
 
 # referenced by _helpers.tpl
 serviceAccount:

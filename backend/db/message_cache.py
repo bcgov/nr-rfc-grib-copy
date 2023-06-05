@@ -105,7 +105,7 @@ class MessageCache:
         with a piece of information that we are wanting to download
         """
         is_of_interest = False
-        #LOGGER.debug("input message: ")
+        # LOGGER.debug("input message: ")
         if msg in self.expected_data:
             is_of_interest = True
         return is_of_interest
