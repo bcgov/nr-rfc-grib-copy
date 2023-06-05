@@ -37,8 +37,8 @@ grib_config = util.grib_file_config.GribFiles()
 topic_strings = grib_config.get_all_topic_strings()
 
 # debugging
-topic_strings = ['v02.post.*.WXO-DD.#']
-q_name = 'q_anonymous.fastapi.listener.testing1'
+# topic_strings = ['v02.post.*.WXO-DD.#']
+# q_name = 'q_anonymous.fastapi.listener.testing1'
 
 
 listener = messaging.listener.AsyncioDataMart(
