@@ -16,6 +16,7 @@ import os
 import sys
 import urllib.parse
 
+# hack... need to fix this.
 path2Add = os.path.join(os.path.dirname(__file__), '..', '..', 'scripts/src')
 sys.path.append(path2Add)
 import GetGribConfig

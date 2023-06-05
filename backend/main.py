@@ -29,8 +29,6 @@ LOGGER.info(f"log config: {log_file_path}")
 # setup the message cache
 grib_callback = messaging.cmc_grib_callbacks.CMC_Grib_Callback()
 
-
-
 # setup the queue and exchange parameters
 q_name = util.config.get_amqp_queue_name()
 exchange_name = util.config.get_amqp_exchange_name()

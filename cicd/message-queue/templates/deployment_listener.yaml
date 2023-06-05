@@ -29,8 +29,20 @@ spec:
         - name: {{ .Values.app.name }}
           image: >-
             {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 15
           ports:
-            - containerPort: 8080
+            - containerPort: 8000
               protocol: TCP
           imagePullPolicy: Always
           env:
