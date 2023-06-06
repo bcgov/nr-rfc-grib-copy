@@ -1,14 +1,6 @@
 
 FROM python:3.11.3-alpine3.17
 
-# ENV DB_FILE_PATH docker.db
-# ENV AMPQ_USERNAME anonymous
-# ENV AMPQ_PASSWORD anonymous
-# ENV AMPQ_DOMAIN
-# ENV CLOUDAMQP_URL
- 
-
-
 WORKDIR /app
 COPY ["./backend/", \
       "scripts/src/GetGribConfig.py", \

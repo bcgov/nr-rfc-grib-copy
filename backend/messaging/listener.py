@@ -43,7 +43,7 @@ class AsyncioDataMart(object):
 
         # In production, experiment with higher prefetch values
         # for higher consumer throughput
-        self._prefetch_count = 1
+        self._prefetch_count = 10
 
         self.on_message_callback = on_message_callback
         self.cur_message_tag = None
@@ -179,7 +179,10 @@ class AsyncioDataMart(object):
         """
         LOGGER.info("Issuing consumer related RPC commands")
         self.add_on_cancel_callback()
-        self._consumer_tag = self._channel.basic_consume(self.queue_name, self.on_message)
+        self._consumer_tag = self._channel.basic_consume(
+            self.queue_name,
+            on_message_callback=self.on_message,
+            auto_ack=False)
         self.was_consuming = True
         self._consuming = True
 

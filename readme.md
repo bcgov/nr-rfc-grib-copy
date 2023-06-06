@@ -33,7 +33,35 @@ which will:
 
 ## message queue subscriber
 
-Remains a work in progress, but initially it will listen for messages using the
-topic: 
+The message queue code is in the `backend` folder.  To init the backend for
+development:
 
+``` bash
+# create the virtual environment if not created already
+python3 -m venv venv
+# activate the virtual environment
+. venv/bin/activate
+# install the dependencies into the virtual environment
+pip install -r requirements.txt -r requirements-dev.txt
+# start the backend process
+python backend/main.py
+```
 
+#### environment variables used by the subscriber
+
+**DB_FILE_PATH**: example (sqlite:////data/event_database.db) where to find the sqllite database file
+**AMPQ_USERNAME**: the username for the AMQP
+**AMPQ_PASSWORD**: the password for the AMQP
+**AMPQ_DOMAIN**: the domain for the AMQP
+
+## Testing containerization
+
+Create the image:
+
+`docker build -t listener:listener .`
+
+Run the image
+
+`docker run --env-file=.env -v $PWD/cmc_cansip/data:/data  -p 8000:8000 listener:listener`
+
+Once the image is running check the healthz end point

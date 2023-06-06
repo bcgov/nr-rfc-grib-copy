@@ -56,14 +56,14 @@ def db_connection_string():
     LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")
     yield SQLALCHEMY_DATABASE_URL
 
+
 @pytest.fixture(scope="module")
 def db_connection_string_operation_data():
-    test_db_file = './backend/tests/test_data/event_database.db'
+    test_db_file = "./backend/tests/test_data/event_database.db"
     test_db_file = os.path.realpath(test_db_file)
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{test_db_file}"
     LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")
     yield SQLALCHEMY_DATABASE_URL
-
 
 
 @pytest.fixture(scope="module")
@@ -108,19 +108,22 @@ def dbEngine(db_connection_string) -> Engine:
 
 @pytest.fixture(scope="function")
 def message_cache_instance(db_connection_string, dbEngine):
-    #TODO: do we need the engine?
+    # TODO: do we need the engine?
     # turn down logging in specific modules
     logging.getLogger("util.grib_file_config").setLevel(logging.INFO)
 
     mc = db.message_cache.MessageCache(db_str=db_connection_string)
     # replace the engine with the one that is gonna get cleaned up...
-    #mc.db = dbEngine
+    # mc.db = dbEngine
     yield mc
+
 
 @pytest.fixture(scope="function")
 def message_cache_instance_operation_data(db_connection_string_operation_data):
     # execution_options = {"schema_translate_map": {"app_fam": None}}
     db_conn_str = db_connection_string_operation_data
+    LOGGER.debug(f"db connection string: {db_conn_str}")
+
     # engine = create_engine(
     #     db_conn_str,
     #     connect_args={"check_same_thread": False}

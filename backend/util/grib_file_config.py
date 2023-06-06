@@ -149,4 +149,6 @@ class GribFiles:
         for config_class in class_dict.keys():
             instance = class_dict[config_class]
             topic_strings.append(instance.amqp_topic_pattern)
+        # topic strings should be unique so remove duplicates
+        topic_strings = list(set(topic_strings))
         return topic_strings

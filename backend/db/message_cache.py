@@ -124,10 +124,12 @@ class MessageCache:
             )
 
         all_there = True
+        missing_files = []
         for expected_file in expected_data:
             if expected_file not in self.cached_events[idemkey]:
                 all_there = False
-                break
+                missing_files.append(expected_file)
+                #break
         # if len(self.cached_events[idemkey]) == len(self.expected_data):
         #     # now see if the actual data is the same.
         #     if (
@@ -136,6 +138,9 @@ class MessageCache:
         #             collections.Counter(self.expected_data)
         #         ):
         #         all_there = True
+        missing_files = list(set(missing_files))
+        LOGGER.info(f"missing: {len(missing_files)}")
+        #LOGGER.debug(f"missing files: {missing_files}")
         return all_there
 
     def clear_cache(self, idemkey=None):

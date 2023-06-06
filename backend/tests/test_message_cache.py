@@ -51,8 +51,14 @@ def test_is_all_data_there(message_cache_instance):
     assert mc.is_all_data_there()
 
 def test_is_all_data_there_operational_data(message_cache_instance_operation_data):
+
+    # problems with the message queue not picking up the expected events.
+    # this dataset seems to be missing now
+    #  - '/20230606/WXO-DD/model_gem_regional/10km/grib2/06/040/CMC_reg_PRATE_SFC_0_ps10km_2023060606_P040.grib2'
+    #                                                           CMC_reg_PRATE_SFC_0_ps10km_2023060606_P040.grib2
     mc = message_cache_instance_operation_data
-    data_there = mc.is_all_data_there(idemkey='20230422')
+
+    data_there = mc.is_all_data_there(idemkey='20230606')
     LOGGER.debug(f"data_there: {data_there}")
 
 # args fixture_name, test params, indirect=True
@@ -68,7 +74,7 @@ def test_cache_filter(message_cache_instance_operation_data):
     # '/20230422/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/090/CMC_glb_PRATE_SFC_0_latlon.15x.15_2023042200_P090.grib2'
     #
     # is_event_of_interest()
-    date_str = '20230526'
+    date_str = '20230606'
     test_event = f'/{date_str}/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/090/CMC_glb_PRATE_SFC_0_latlon.15x.15_{date_str}00_P090.grib2'
     mc = message_cache_instance_operation_data
     is_of_interest = mc.is_event_of_interest(msg=test_event)
@@ -112,9 +118,4 @@ def test_clear_cache(message_cache_instance_with_data):
     # make sure the key that wasn't cleared is still in memory
     assert key1 in mc.cached_events
 
-
-
-
-# TODO: create a test of recovery from failed pod, where records are in
-# the db and process has to restart.
 
