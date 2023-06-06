@@ -91,6 +91,7 @@ class AsyncioDataMart(object):
         # Note: using functools.partial is not required, it is demonstrating
         # how arbitrary data can be passed to the callback when it is called
         cb = functools.partial(self.on_exchange_declareok, userdata=exchange_name)
+
         self._channel.exchange_declare(
             exchange=exchange_name,
             exchange_type=self.exchange_type,
@@ -105,7 +106,25 @@ class AsyncioDataMart(object):
 
     def setup_queue(self, queue_name):
         LOGGER.info("Declaring queue %s", queue_name)
-        self._channel.queue_declare(queue=queue_name, callback=self.on_queue_declareok)
+
+        # was getting an error: pika.channel - WARNING - Received remote Channel.Close (406): "PRECONDITION_FAILED
+        #   that error can be resolved by deleting the queue as is shown in the
+        #   commented out code.  Problem is there doesn't seem to be a way to
+        #   identify if this method failed.  Might call the channel close.
+        #   could implement a q_ok parameter, then if the channel close is called
+        #   and the queue isn't ok, it would try to delete and recreate the queue
+        #
+        # LOGGER.debug("trying to delete queue")
+        # self._channel.queue_delete(queue=queue_name, if_unused=False, if_empty=False)
+        # LOGGER.debug("queue deleted")
+
+        val = self._channel.queue_declare(
+            queue=queue_name,
+            auto_delete=True,
+            durable=True,
+            callback=self.on_queue_declareok
+        )
+        LOGGER.info(f"queue_declare: {val}")
 
     def on_queue_declareok(self, _unused_frame):
         """defines the topics that the listener will listen for
