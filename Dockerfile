@@ -10,6 +10,8 @@ RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
 #
 # COPY ./app /code/app
+EXPOSE 8000
 
-# #
-CMD ["python", "/app/main.py"]
+# should run be init with uvicorn app.main:app --reload --host
+# CMD ["python", "/app/main.py"]
+CMD ["uvicorn", "main:app", "--port=8000", "--host=0.0.0.0"]

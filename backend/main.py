@@ -26,6 +26,9 @@ logging.config.fileConfig(log_file_path)
 LOGGER = logging.getLogger(__name__)
 LOGGER.info(f"log config: {log_file_path}")
 
+# holder for the listener object
+async_listener = None
+
 # setup the message cache
 grib_callback = messaging.cmc_grib_callbacks.CMC_Grib_Callback()
 
@@ -58,6 +61,7 @@ app.include_router(router.router)
 async def startup() -> None:
     """gets run when the api starts, inits the rabbitmq listener process
     """
+    global async_listener
     LOGGER.info('starting listener...')
     async_listener = listener.connect()
     # async_listener.ioloop.run_forever()
