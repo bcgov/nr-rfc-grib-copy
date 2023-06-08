@@ -58,8 +58,14 @@ def test_is_all_data_there_operational_data(message_cache_instance_operation_dat
     #                                                           CMC_reg_PRATE_SFC_0_ps10km_2023060606_P040.grib2
     mc = message_cache_instance_operation_data
 
-    data_there = mc.is_all_data_there(idemkey='20230606')
+    data_there = mc.is_all_data_there(idemkey='20230608')
     LOGGER.debug(f"data_there: {data_there}")
+    assert data_there
+
+def test_is_all_data_there_startup_emits_event():
+    # verifies that if the database has all the events it is expecting it will
+    # proceed to with whatever action is configured.
+    pass
 
 # args fixture_name, test params, indirect=True
 # @pytest.mark.parametrize()

@@ -50,6 +50,7 @@ class MessageCache:
         # of data
         self.current_idempotency_key = None
         self.current_idempotency_key = self.get_current_idempotency_key()
+        LOGGER.debug("current idempotency key: %s", self.current_idempotency_key)
 
         # make sure the idempotency_key is in the in memory struct
         if self.current_idempotency_key not in self.cached_events:
@@ -123,24 +124,19 @@ class MessageCache:
                 only_file_path=True, date_str=idemkey
             )
 
-        all_there = True
-        missing_files = []
-        for expected_file in expected_data:
-            if expected_file not in self.cached_events[idemkey]:
-                all_there = False
-                missing_files.append(expected_file)
-                #break
-        # if len(self.cached_events[idemkey]) == len(self.expected_data):
-        #     # now see if the actual data is the same.
-        #     if (
-        #             collections.Counter(self.cached_events[idemkey])
-        #             ==
-        #             collections.Counter(self.expected_data)
-        #         ):
-        #         all_there = True
-        missing_files = list(set(missing_files))
-        LOGGER.info(f"missing: {len(missing_files)}")
-        #LOGGER.debug(f"missing files: {missing_files}")
+        all_there = False
+        # first check the cached events, if the idem key not there then try to
+        # load
+        if idemkey in self.cached_events:
+            all_there = True
+            missing_files = []
+            for expected_file in expected_data:
+                if expected_file not in self.cached_events[idemkey]:
+                    all_there = False
+                    missing_files.append(expected_file)
+            missing_files = list(set(missing_files))
+            LOGGER.info(f"missing: {len(missing_files)}")
+            #LOGGER.debug(f"missing files: {missing_files}")
         return all_there
 
     def clear_cache(self, idemkey=None):
@@ -169,7 +165,7 @@ class MessageCache:
         """
         queries the db for all the events then assembled a data structure like:
         struct:
-            <idempotency_key>
+            <idempotency_key> ... which is the date string when events are emitted
                 event
                 event
                 event

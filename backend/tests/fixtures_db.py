@@ -59,7 +59,7 @@ def db_connection_string():
 
 @pytest.fixture(scope="module")
 def db_connection_string_operation_data():
-    test_db_file = "./backend/tests/test_data/event_database.db"
+    test_db_file = "./backend/tests/test_data/event_database_old3.db"
     test_db_file = os.path.realpath(test_db_file)
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{test_db_file}"
     LOGGER.debug(f"SQL Alchemy URL: {SQLALCHEMY_DATABASE_URL}")

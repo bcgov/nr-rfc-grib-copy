@@ -70,5 +70,6 @@ async def startup() -> None:
     LOGGER.info('startup complete')
 
 if __name__ == "__main__":
+    # adding this script to run through the debugger
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
