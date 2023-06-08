@@ -1,4 +1,0 @@
-OBJ_STORE_BUCKET=<bucket name>
-OBJ_STORE_SECRET=<secret>
-OBJ_STORE_USER=<user id>
-OBJ_STORE_HOST=<host>

@@ -16,6 +16,7 @@ import os
 import sys
 import urllib.parse
 
+# hack... need to fix this.
 path2Add = os.path.join(os.path.dirname(__file__), '..', '..', 'scripts/src')
 sys.path.append(path2Add)
 import GetGribConfig
@@ -148,4 +149,6 @@ class GribFiles:
         for config_class in class_dict.keys():
             instance = class_dict[config_class]
             topic_strings.append(instance.amqp_topic_pattern)
+        # topic strings should be unique so remove duplicates
+        topic_strings = list(set(topic_strings))
         return topic_strings

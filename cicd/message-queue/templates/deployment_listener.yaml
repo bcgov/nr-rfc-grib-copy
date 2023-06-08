@@ -29,8 +29,24 @@ spec:
         - name: {{ .Values.app.name }}
           image: >-
             {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 10
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            failureThreshold: 10
+
           ports:
-            - containerPort: 8080
+            - containerPort: 8000
               protocol: TCP
           imagePullPolicy: Always
           env:
@@ -70,10 +86,16 @@ spec:
       schedulerName: default-scheduler
       imagePullSecrets: []
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
+    # currently caching the events in a sqlite database, so we need to recreate
+    # the pod otherwise it will raise and error when two pods are trying to
+    # access the same volume eventually can replace with a proper database like
+    # postgres
+    type: Recreate
+
+    # type: RollingUpdate
+    # rollingUpdate:
+    #   maxSurge: 25%
+    #   maxUnavailable: 25%
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600
   paused: false

@@ -22,26 +22,31 @@ class CMC_Grib_Callback:
             # emit event...
             self.emit_event()
 
-    def cmc_callback(self, ch, method, properties, body):
+    def cmc_callback(self, body, delivery_tag, channel):
         # example of emitted message body string:
         #   20230419181943.032 https://hpfx.collab.science.gc.ca /20230419/WXO-DD/.hello_weather/observations/08/08005.1.OBS.MAR.EN.SPX~20230419180500-20230419200500-1557
         #   0 - datetimestamp (i think!)
         #   1 - protocol / domain to server w/ data
         #   2 - directory path to the data that is now available
+        LOGGER.debug(f"param: {channel}")
+        LOGGER.debug(f"body: {body}")
+
         msg_body = body.decode()
         msg_list = msg_body.split(' ')
         emitted_file_name = msg_list[2]
+        LOGGER.debug(f"message recieved: {msg_body}")
+
+        # store event in cache - caching every event to help with debugging
+        self.mc.cache_event(emitted_file_name)
 
         # is this an event we are interested in
         if self.mc.is_event_of_interest(emitted_file_name):
-
-            # store event in cache
-            self.mc.cache_event(emitted_file_name)
-
             # check to see if all the events are available.
             if self.mc.is_all_data_there():
                 LOGGER.info(f"data complete for idem key: {self.mc.current_idempotency_key}")
                 self.emit_event()
+        LOGGER.debug("acknowledging message")
+        channel.basic_ack(delivery_tag)
 
     def emit_event(self):
         """called when a new event is emitted
