@@ -62,9 +62,11 @@ def test_is_all_data_there_operational_data(message_cache_instance_operation_dat
     LOGGER.debug(f"data_there: {data_there}")
     assert data_there
 
-def test_is_all_data_there_startup_emits_event():
+def test_is_all_data_there_startup_emits_event(message_cache_instance_operation_data):
     # verifies that if the database has all the events it is expecting it will
     # proceed to with whatever action is configured.
+    mc = message_cache_instance_operation_data
+    mc.check_for_unemitted_events()
     pass
 
 # args fixture_name, test params, indirect=True
@@ -73,6 +75,21 @@ def test_is_all_data_there_startup_emits_event():
 #     mc = message_cache_instance_with_data
 #     mc.is_all_data_there(idem_key='20230422')
 #     pass
+
+def test_get_idem_keys(message_cache_instance_operation_data):
+    """verifies that the method to query the idempotency keys from the database
+    is working correctly.
+
+    :param message_cache_instance_operation_data: a fixture that returns a message
+        cache instance that is configured to use the a database with some real
+        data in it
+    :type message_cache_instance_operation_data: db.message_cache.MessageCache
+    """
+    mc = message_cache_instance_operation_data
+    idem_keys  = mc.get_cached_id_keys()
+
+    LOGGER.debug(f"idem_keys: {idem_keys}")
+    assert '20230608' in idem_keys
 
 def test_cache_filter(message_cache_instance_operation_data):
     # either this message isn't getting emitted, or the filter isn't

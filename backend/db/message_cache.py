@@ -22,14 +22,14 @@ import logging
 import db.model
 import util.config
 import util.grib_file_config
-from sqlalchemy import create_engine, delete, inspect
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, delete, inspect, select
+from sqlalchemy.orm import Session, sessionmaker
 
 LOGGER = logging.getLogger(__name__)
 
 
 class MessageCache:
-    def __init__(self, db_str=None):
+    def __init__(self, db_str=None, id_key=None):
         # db file location should come from an env var, different depending
         # on local vs deployed
         if not db_str:
@@ -49,6 +49,9 @@ class MessageCache:
         # data is collected daily so can use the date to identify a collection
         # of data
         self.current_idempotency_key = None
+        if id_key is not None:
+            self.current_idempotency_key = id_key
+
         self.current_idempotency_key = self.get_current_idempotency_key()
         LOGGER.debug("current idempotency key: %s", self.current_idempotency_key)
 
@@ -59,7 +62,38 @@ class MessageCache:
         self.grib_config = util.grib_file_config.GribFiles()
 
         # getting a list of files that are expected per idem key
-        self.expected_data = self.grib_config.calculate_expected_file_list(only_file_path=True)
+        self.expected_data = self.grib_config.calculate_expected_file_list(
+            only_file_path=True)
+
+        # check for unemitted events
+        self.check_for_unemitted_events()
+
+    def check_for_unemitted_events(self):
+        """ get the data that is in the database,
+            iterate over the unique id keys,
+            check to see if the data is there for the days that exist.
+            emit the events associated if all the data is there
+            get some kind of confirmation that the request was triggered
+            delete all the data associated with the id keys that were emitted
+        """
+        un_emitted_idem_keys = self.get_cached_id_keys()
+        for idem_key in un_emitted_idem_keys:
+            if self.is_all_data_there(idem_key):
+                LOGGER.info(f"all data there for: {idem_key}")
+
+    def get_cached_id_keys(self):
+        """makes a database call to get all the id's that are currently in the
+        database.
+        """
+        keys = []
+        with Session(self.engine) as session:
+            rows = session.query(db.model.Events.event_idempotency_key).distinct()
+            #statement = select(db.model.Events.event_idempotency_key)
+            #rows = session.execute(statement).all()
+            for row in rows:
+                LOGGER.debug(f"row: {row}")
+                keys.append(row[0])
+        return keys
 
     def init_db(self):
         """if the database doesn't have the tables in it, then create them"""
@@ -72,7 +106,8 @@ class MessageCache:
             LOGGER.info("Creating the database tables")
             db.model.Base.metadata.create_all(bind=self.engine)
         else:
-            LOGGER.info(f"db already there... table {db.model.Events.__tablename__} exists")
+            LOGGER.info("db already there... table " +
+                        f"{db.model.Events.__tablename__} exists")
 
     def get_current_idempotency_key(self):
         """because the data is available daily, using the date stamp as the
@@ -136,7 +171,7 @@ class MessageCache:
                     missing_files.append(expected_file)
             missing_files = list(set(missing_files))
             LOGGER.info(f"missing: {len(missing_files)}")
-            #LOGGER.debug(f"missing files: {missing_files}")
+            # LOGGER.debug(f"missing files: {missing_files}")
         return all_there
 
     def clear_cache(self, idemkey=None):
