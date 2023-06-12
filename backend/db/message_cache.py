@@ -134,8 +134,12 @@ class MessageCache:
             #statement = select(db.model.Events.event_idempotency_key)
             #rows = session.execute(statement).all()
             for row in rows:
-                LOGGER.debug(f"row: {row}")
+                #LOGGER.debug(f"row: {row}")
                 keys.append(row[0])
+        LOGGER.debug(f"number of cached ids: {len(keys)}")
+        if len(keys) > 4:
+            LOGGER.debug(f"sample keys: {keys[:3]}")
+
         return keys
 
     def init_db(self):
