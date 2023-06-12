@@ -42,6 +42,7 @@ class MessageCache:
         self.init_db()
 
         self.session_maker = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        LOGGER.debug("session maker created")
 
         # now load any cached events from the database into memory
         self.cached_events = self.get_cached_events_as_struct()
@@ -91,8 +92,12 @@ class MessageCache:
             #statement = select(db.model.Events.event_idempotency_key)
             #rows = session.execute(statement).all()
             for row in rows:
-                LOGGER.debug(f"row: {row}")
+                #LOGGER.debug(f"row: {row}")
                 keys.append(row[0])
+        LOGGER.debug(f"number of cached ids: {len(keys)}")
+        if len(keys) > 4:
+            LOGGER.debug(f"sample keys: {keys[:3]}")
+
         return keys
 
     def init_db(self):
@@ -120,8 +125,15 @@ class MessageCache:
         return cur_idem_key
 
     def cache_event(self, msg, idem_key=None):
-        # event = model.Events(event_message=msg_text)
-        # db_session.add(event)
+        """msg is the message that is recieved originally from the AMQP event.
+        This method will store the message in the database and in memory.
+
+        :param msg: _description_
+        :type msg: _type_
+        :param idem_key: _description_, defaults to None
+        :type idem_key: _type_, optional
+        """
+
         if idem_key is None:
             idem_key = self.current_idempotency_key
 
@@ -213,6 +225,7 @@ class MessageCache:
             if event.event_idempotency_key not in struct:
                 struct[event.event_idempotency_key] = []
             struct[event.event_idempotency_key].append(event.event_message)
+        LOGGER.debug(f"cached events: {len(struct)}")
         return struct
 
     def get_cached_events(self):
@@ -220,4 +233,5 @@ class MessageCache:
         result_set = None
         with self.session_maker() as session:
             result_set = session.query(db.model.Events).all()
+            LOGGER.debug(f"events retrieved from db: {len(result_set)}")
         return result_set

@@ -2,8 +2,11 @@
 originate in env variables
 """
 
+import logging
 import os
 import urllib
+
+LOGGER = logging.getLogger(__name__)
 
 event_db_file_name = "event_cache.db"
 ampq_params = {"heartbeat": 600, "blocked_connection_timeout": 300}
@@ -23,6 +26,8 @@ AMPQ_DOMAIN = "AMPQ_DOMAIN"
 AMPQ_EXCHANGE = "AMPQ_EXCHANGE"
 CLOUDAMQP_URL = "CLOUDAMQP_URL"
 
+MESSAGE_ACK = os.getenv("MESSAGE_ACK", "1")
+MESSAGE_ACK = bool(int(MESSAGE_ACK))
 
 def get_db_string(ignore_env=False):
     """retrieves the database connection string
@@ -37,6 +42,8 @@ def get_db_string(ignore_env=False):
         db_str = os.getenv("DB_FILE_PATH", local_db_path)
     else:
         db_str = local_db_path
+
+
 
     # example connection string
     # sqlite:///C:\\sqlitedbs\\school.db

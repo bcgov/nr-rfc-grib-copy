@@ -45,6 +45,12 @@ python3 -m venv venv
 pip install -r requirements.txt -r requirements-dev.txt
 # start the backend process
 python backend/main.py
+
+# or run through uvicorn
+export DB_FILE_PATH=sqlite:///../data/event_database.db
+dotenv
+cd backend
+uvicorn main:app --port=8000 --host=0.0.0.0
 ```
 
 #### environment variables used by the subscriber

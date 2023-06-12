@@ -1,8 +1,10 @@
 # contains the callback functions used for CMC grib messages / channels
 
 import logging
+import pathlib
 
 import db.message_cache
+import util.config
 
 LOGGER = logging.getLogger(__name__)
 
@@ -11,6 +13,9 @@ class CMC_Grib_Callback:
     def __init__(self):
         # init db connection
         self.mc = db.message_cache.MessageCache()
+
+        # whether to ack messages or not
+        self.ack = util.config.MESSAGE_ACK
 
         # current idem key
         self.cur_idem_key = self.mc.get_current_idempotency_key()
@@ -36,8 +41,15 @@ class CMC_Grib_Callback:
         emitted_file_name = msg_list[2]
         LOGGER.debug(f"message recieved: {msg_body}")
 
+        # because we are using the hpfx server, we are expecting the date to be
+        # the first directory in the message (path)
+        # extracting that from the message
+        # /20230422/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/150/CMC_glb_TMP_TGL_2_latlon.15x.15_2023042200_P150.grib2
+        p = pathlib.Path(emitted_file_name)
+        date_str = p.parts[1]
+
         # store event in cache - caching every event to help with debugging
-        self.mc.cache_event(emitted_file_name)
+        self.mc.cache_event(emitted_file_name, idem_key=date_str)
 
         # is this an event we are interested in
         if self.mc.is_event_of_interest(emitted_file_name):
@@ -46,7 +58,8 @@ class CMC_Grib_Callback:
                 LOGGER.info(f"data complete for idem key: {self.mc.current_idempotency_key}")
                 self.emit_event()
         LOGGER.debug("acknowledging message")
-        channel.basic_ack(delivery_tag)
+        if self.ack:
+            channel.basic_ack(delivery_tag)
 
     def emit_event(self):
         """called when a new event is emitted

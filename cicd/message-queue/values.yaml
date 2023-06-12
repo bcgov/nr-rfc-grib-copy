@@ -82,11 +82,11 @@ app:
 
 image:
   # image_tag: 20230412-2139 20230421-1758 20230607-2207
-  image_tag: 20230607-2207
+  image_tag: 20230608-2208
   domain: apps.silver.devops.gov.bc.ca
   registry:  ghcr.io
   #promote: bcgov/nr-rfc-grib-copy/datamart_listener:prod
-  promote: bcgov/datamart_listener:20230607-2207
+  promote: bcgov/datamart_listener:20230608-2208
   #20230605-2214
 
 config:
