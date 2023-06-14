@@ -34,7 +34,7 @@ spec:
             httpGet:
               path: /healthz
               port: 8000
-            initialDelaySeconds: 45
+            initialDelaySeconds: 60
             periodSeconds: 15
             failureThreshold: 10
 
@@ -73,11 +73,11 @@ spec:
               mountPath: {{ .Values.app.pvc_mount_point }}
           resources:
             limits:
-              cpu: 100m
-              memory: 150Mi
+              cpu: 150m
+              memory: 400Mi
             requests:
-              cpu: 15m
-              memory: 75Mi
+              cpu: 50m
+              memory: 125Mi
 
 
       restartPolicy: Always
