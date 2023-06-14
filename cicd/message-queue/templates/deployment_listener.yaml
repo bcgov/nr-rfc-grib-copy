@@ -28,7 +28,8 @@ spec:
       containers:
         - name: {{ .Values.app.name }}
           image: >-
-            {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+            {{ .Values.image.image_registry }}/{{ .Release.Namespace }}/{{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+          #{{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
           livenessProbe:
             httpGet:
               path: /healthz

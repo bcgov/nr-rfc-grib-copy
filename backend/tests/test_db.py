@@ -35,6 +35,7 @@ def test_db_events(db_session):
     db_session.flush()
     event_db_recs = db_session.query(model.Events).filter_by(
         event_idempotency_key=date_string).all()
+    LOGGER.debug(f"number of records: {len(event_db_recs)}")
     assert len(event_db_recs) == 2
     # extract the messages
     msg_list = [event.event_message for event in event_db_recs]
@@ -56,17 +57,20 @@ def test_get_events(message_cache_instance_operation_data):
     # databases
     mc = message_cache_instance_operation_data
     test_date_with_all_data = '20230608'
-    status = mc.is_all_data_there(idemkey=test_date_with_all_data)
+    status = mc.is_all_data_there(idem_key=test_date_with_all_data)
+    LOGGER.debug(f"data with key: {test_date_with_all_data} is all there: {status}")
     assert status
 
     # now verify a date that doesn't have any data associated with it
     test_date_with_missing_data = '20230607'
-    status = mc.is_all_data_there(idemkey=test_date_with_missing_data)
+    status = mc.is_all_data_there(idem_key=test_date_with_missing_data)
+    LOGGER.debug(f"data with key: {test_date_with_missing_data} is all there: {status}")
     assert not status
 
     # finally try with a date that only has some data
     test_date_with_missing_data = '20230606'
-    status = mc.is_all_data_there(idemkey=test_date_with_missing_data)
+    status = mc.is_all_data_there(idem_key=test_date_with_missing_data)
+    LOGGER.debug(f"data with key: {test_date_with_missing_data} is all there: {status}")
     assert not status
 
 # def test_is_event_of_interest(message_cache_instance_operation_data):

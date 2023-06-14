@@ -63,24 +63,27 @@ class MessageCache:
         self.grib_config = util.grib_file_config.GribFiles()
 
         # getting a list of files that are expected per idem key
-        self.expected_data = self.grib_config.calculate_expected_file_list(
-            only_file_path=True)
+        # convert expected data into a dictionary using the idem_key as the key
+        self.expected_data = {}
+        self.expected_data[self.current_idempotency_key] = self.grib_config.calculate_expected_file_list(
+            only_file_path=True, date_str=self.current_idempotency_key)
 
-        # check for unemitted events
-        self.check_for_unemitted_events()
+        # # check for unemitted events
+        # self.check_for_unemitted_events()
 
-    def check_for_unemitted_events(self):
-        """ get the data that is in the database,
-            iterate over the unique id keys,
-            check to see if the data is there for the days that exist.
-            emit the events associated if all the data is there
-            get some kind of confirmation that the request was triggered
-            delete all the data associated with the id keys that were emitted
-        """
-        un_emitted_idem_keys = self.get_cached_id_keys()
-        for idem_key in un_emitted_idem_keys:
-            if self.is_all_data_there(idem_key):
-                LOGGER.info(f"all data there for: {idem_key}")
+    # def check_for_unemitted_events(self):
+    #     """ get the data that is in the database,
+    #         iterate over the unique id keys,
+    #         check to see if the data is there for the days that exist.
+    #         emit the events associated if all the data is there
+    #         get some kind of confirmation that the request was triggered
+    #         delete all the data associated with the id keys that were emitted
+    #     """
+    #     un_emitted_idem_keys = self.get_cached_id_keys()
+    #     for idem_key in un_emitted_idem_keys:
+    #         if self.is_all_data_there(idem_key=idem_key):
+    #             LOGGER.info(f"all data there for: {idem_key}")
+
 
     def get_cached_id_keys(self):
         """makes a database call to get all the id's that are currently in the
@@ -97,6 +100,8 @@ class MessageCache:
         LOGGER.debug(f"number of cached ids: {len(keys)}")
         if len(keys) > 4:
             LOGGER.debug(f"sample keys: {keys[:3]}")
+        else:
+            LOGGER.debug(f"sample keys: {keys}")
 
         return keys
 
@@ -147,57 +152,71 @@ class MessageCache:
                 self.cached_events[idem_key] = []
             self.cached_events[idem_key].append(msg)
 
-    def is_event_of_interest(self, msg):
+    def is_event_of_interest(self, msg, idem_key=None):
         """
         is the event one that we are interested in, ie does it correspond
         with a piece of information that we are wanting to download
         """
         is_of_interest = False
+        if idem_key is None:
+            idem_key = self.current_idempotency_key
+
+        if idem_key not in self.expected_data:
+            # calculated the expected data list for the date in question
+            self.expected_data[idem_key] = self.grib_config.calculate_expected_file_list(
+            only_file_path=True, date_str=idem_key)
+
         # LOGGER.debug("input message: ")
-        if msg in self.expected_data:
+        if msg in self.expected_data[idem_key]:
             is_of_interest = True
         return is_of_interest
 
-    def is_all_data_there(self, idemkey=None):
+    def is_all_data_there(self, idem_key=None):
         """
         returns a boolean value indicating if all the data we are attempting
         to download is available.
         """
-        if idemkey is None:
-            idemkey = self.current_idempotency_key
-            expected_data = self.expected_data
-        else:
-            expected_data = self.grib_config.calculate_expected_file_list(
-                only_file_path=True, date_str=idemkey
+        if idem_key is None:
+            idem_key = self.current_idempotency_key
+
+        if idem_key not in self.expected_data:
+            self.expected_data[idem_key] = self.grib_config.calculate_expected_file_list(
+                only_file_path=True, date_str=idem_key
             )
 
-        all_there = False
+        all_there = True
         # first check the cached events, if the idem key not there then try to
         # load
-        if idemkey in self.cached_events:
-            all_there = True
-            missing_files = []
-            for expected_file in expected_data:
-                if expected_file not in self.cached_events[idemkey]:
-                    all_there = False
-                    missing_files.append(expected_file)
+        # if idem_key in self.cached_events:
+        missing_files = []
+        if idem_key not in self.cached_events:
+            all_there = False
+        for expected_file in self.expected_data[idem_key]:
+            if all_there and expected_file not in self.cached_events[idem_key]:
+                all_there = False
+                missing_files.append(expected_file)
             missing_files = list(set(missing_files))
-            LOGGER.info(f"missing: {len(missing_files)}")
-            # LOGGER.debug(f"missing files: {missing_files}")
+        LOGGER.info(f"number of missing files: {len(missing_files)}")
+        if len(missing_files) < 5:
+            LOGGER.info(f"missing files: {missing_files}")
+        else:
+            LOGGER.info(f"first 5 of {len(missing_files)} missing files: {missing_files[:5]}")
+
+        # LOGGER.debug(f"missing files: {missing_files}")
         return all_there
 
-    def clear_cache(self, idemkey=None):
+    def clear_cache(self, idem_key=None):
         """when all the data we are expecting has been provided and passed on
         to the next process we will need to clear the cache.  That is what
         this method will do.
         """
-        if idemkey is None:
-            idemkey = self.current_idempotency_key
+        if idem_key is None:
+            idem_key = self.current_idempotency_key
 
         # first get rid fo the database records
         with self.session_maker() as session:
             stmt = delete(db.model.Events).where(
-                db.model.Events.event_idempotency_key.in_([idemkey])
+                db.model.Events.event_idempotency_key.in_([idem_key])
             )
             LOGGER.debug(f"delete stmt: {stmt}")
             # stmt = delete(db.model.Events).all()
@@ -205,8 +224,8 @@ class MessageCache:
             session.commit()
 
         # now get rid of the in memory struct
-        if idemkey in self.cached_events:
-            del self.cached_events[idemkey]
+        if idem_key in self.cached_events:
+            del self.cached_events[idem_key]
 
     def get_cached_events_as_struct(self):
         """

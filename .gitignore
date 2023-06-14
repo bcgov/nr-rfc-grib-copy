@@ -17,3 +17,4 @@ message.log
 test_oc/
 event_database.db
 test_db.db
+backend/data/event_database_backup.db

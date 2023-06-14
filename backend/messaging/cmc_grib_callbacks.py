@@ -21,11 +21,16 @@ class CMC_Grib_Callback:
         self.cur_idem_key = self.mc.get_current_idempotency_key()
 
         # TODO: check for multiple idem keys and figure out logic for those
+        self.emit_cached_events()
 
         # load any residual transactions possibly
-        if self.mc.is_all_data_there():
-            # emit event...
-            self.emit_event()
+
+    def emit_cached_events(self):
+        idem_keys = self.mc.get_cached_id_keys()
+        for idem_key in idem_keys:
+            if self.mc.is_all_data_there(idem_key=idem_key):
+                # emit event...
+                self.emit_event(idem_key=idem_key)
 
     def cmc_callback(self, body, delivery_tag, channel):
         # example of emitted message body string:
@@ -51,7 +56,8 @@ class CMC_Grib_Callback:
         # store event in cache - caching every event to help with debugging
         self.mc.cache_event(emitted_file_name, idem_key=date_str)
 
-        # is this an event we are interested in
+        # is this an event we are interested in, working on the current date that
+        # has been calculated in the message cache property 'current_idempotency_key'
         if self.mc.is_event_of_interest(emitted_file_name):
             # check to see if all the events are available.
             if self.mc.is_all_data_there():
@@ -61,8 +67,14 @@ class CMC_Grib_Callback:
         if self.ack:
             channel.basic_ack(delivery_tag)
 
-    def emit_event(self):
+    def emit_event(self, idem_key=None):
         """called when a new event is emitted
         """
-        LOGGER.info(f"NEW EVENT EMITTING: {self.mc.current_idempotency_key}")
-        self.mc.clear_cache()
+        if idem_key is None:
+            idem_key = self.mc.current_idempotency_key
+        LOGGER.info(f"NEW EVENT EMITTING: {idem_key}")
+
+        # TODO: commenting this out until the downstream events are configured
+        #       so that we do not lose the events that are currently being cached
+        #       in the database.
+        #self.mc.clear_cache(idem_key=idem_key)

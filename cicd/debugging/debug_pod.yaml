@@ -1,0 +1,16 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: volume-debugger
+spec:
+  volumes:
+    - name: data-volume
+      persistentVolumeClaim:
+       claimName: messagesubscriber-messagesubscriber-listener
+  containers:
+    - name: debugger
+      image: busybox
+      command: ['sleep', '3600']
+      volumeMounts:
+        - mountPath: "/data"
+          name: data-volume
