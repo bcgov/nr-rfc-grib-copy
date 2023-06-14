@@ -1,0 +1,21 @@
+name: test remote execution
+
+on:
+  # push:
+  #   branches:
+  #     - "feat/daily-grib2-download"
+  # cron schedules are in UTC
+  # this job should run at 5.31 am pst, which translates to 1.31 pm.
+  # schedule:
+  #   - cron: '31 13 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: do-something
+
+jobs:
+  build:
+    name: Run Some Thing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do Something
+        run: echo Doing Something...
