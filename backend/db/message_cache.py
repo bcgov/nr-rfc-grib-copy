@@ -45,7 +45,10 @@ class MessageCache:
         LOGGER.debug("session maker created")
 
         # now load any cached events from the database into memory
+        LOGGER.debug("getting cached events ...")
         self.cached_events = self.get_cached_events_as_struct()
+        for key in self.cached_events:
+            LOGGER.debug(f"cached events for {key}: {len(self.cached_events[key])}")
 
         # data is collected daily so can use the date to identify a collection
         # of data
@@ -238,6 +241,7 @@ class MessageCache:
                 ...
 
         """
+        LOGGER.debug("getting cached events")
         struct = {}
         events_result_set = self.get_cached_events()
         for event in events_result_set:

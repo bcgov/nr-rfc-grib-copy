@@ -9,7 +9,8 @@ spec:
        claimName: messagesubscriber-messagesubscriber-listener
   containers:
     - name: debugger
-      image: busybox
+      #image: busybox
+      image: ghcr.io/bcgov/datamart_listener:20230614-2005
       command: ['sleep', '3600']
       volumeMounts:
         - mountPath: "/data"
