@@ -17,5 +17,9 @@ jobs:
     name: Run Some Thing
     runs-on: ubuntu-latest
     steps:
-      - name: Do Something
-        run: echo Doing Something...
+      - env:
+          MESSAGE: ${{ github.event.client_payload.message }}
+        name: Do Something
+        run: |
+          echo Doing Something...
+          echo Incomming message: $MESSAGE
