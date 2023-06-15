@@ -23,3 +23,5 @@ jobs:
         run: |
           echo Doing Something...
           echo Incomming message: $MESSAGE
+          echo "payload as json: ${{ toJson(github.event.client_payload) }}"
+          echo "payload non json: ${{ github.event.client_payload }}"
