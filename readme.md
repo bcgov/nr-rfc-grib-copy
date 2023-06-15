@@ -71,3 +71,18 @@ Run the image
 `docker run --env-file=.env -v $PWD/cmc_cansip/data:/data  -p 8000:8000 listener:listener`
 
 Once the image is running check the healthz end point
+
+# Remote job trigger
+
+the following is an example of calling a github action that has a remote_workflow
+execution type defined for it:
+
+curl -H "Accept: application/vnd.github.everest-preview+json" \
+    -H "Authorization: token <insert github personal access toke>" \
+    --request POST \
+    --data '{"event_type": "<the type defined for the action>"}' \
+    https://api.github.com/repos/<repo-org>/<repository_name>/dispatches
+
+The following is an example of a job that has been triggered using a webhook:
+https://github.com/bcgov/nr-rfc-grib-copy/actions/runs/5273197792/jobs/9536328668
+
