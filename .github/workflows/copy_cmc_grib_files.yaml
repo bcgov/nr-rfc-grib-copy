@@ -58,7 +58,7 @@ jobs:
       run: |
         ls -la
 
-    - id: download__cmc_grib
+    - id: download_cmc_grib
       name: download grib files
       shell: bash
       - env:
