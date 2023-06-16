@@ -52,11 +52,11 @@ jobs:
         chmod +x wgrib2
         mv wgrib2 $WGRIB_UTILITY
 
-    - id: debug
-      name: debug and list files
-      shell: bash
-      run: |
-        ls -la
+    # - id: debug
+    #   name: debug and list files
+    #   shell: bash
+    #   run: |
+    #     ls -la
 
     - id: download_cmc_grib
       name: download grib files
