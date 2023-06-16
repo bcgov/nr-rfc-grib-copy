@@ -19,17 +19,11 @@ jobs:
     steps:
       - env:
           MESSAGE: ${{ github.event.client_payload.message }}
+          DATESTR: ${{ github.event.client_payload.idem_key }}
+          JSONSTR: ${{ github.event.client_payload }}
         name: Do Something
         run: |
           echo Doing Something...
           echo Incomming message: $MESSAGE
-          echo "payload as json: ${{ toJson(github.event.client_payload) }} | jq ."
-          echo ${{ toJson(github.event.client_payload) }} > payload.json
-          date=$(cat payload.json | tr  -d '\n' | jq .idem_key | tr -d '"')
-          echo date is $date
-          jsonstr=$(${{ toJson(github.event.client_payload) }} | tr -d '\n')
-          echo jsonstr: $jsonstr
-          $(cat junk.txt | tr  -d '\n' | jq .idem_key | tr -d '"')
-          var=$(${{ toJson(github.event.client_payload) }} | jq .message)
-          echo "var: $var"
-          echo "payload non json: ${{ github.event.client_payload }}"
+          echo Date is: $DATESTR
+          echo JSONSTR is: $JSONSTR
