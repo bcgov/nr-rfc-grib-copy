@@ -24,7 +24,9 @@ jobs:
           echo Doing Something...
           echo Incomming message: $MESSAGE
           echo "payload as json: ${{ toJson(github.event.client_payload) }} | jq ."
-          echo "payload as json: ${{ toJson(github.event.client_payload) }} | jq .message"
+          echo ${{ toJson(github.event.client_payload) }} > payload.json
+          date=$(cat payload.json | tr  -d '\n' | jq .idem_key | tr -d '"')
+          echo date is $date
           jsonstr=$(${{ toJson(github.event.client_payload) }} | tr -d '\n')
           echo jsonstr: $jsonstr
           $(cat junk.txt | tr  -d '\n' | jq .idem_key | tr -d '"')

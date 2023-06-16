@@ -58,6 +58,6 @@ test_remote_action_dispatch.yaml
 curl -H "Accept: application/vnd.github.everest-preview+json" \
     -H "Authorization: token $GH_TOKEN" \
     --request POST \
-    --data '{"event_type": "do-something", "client_payload": {"message": "bar"}}' \
+    --data '{"event_type": "do-something", "client_payload": {"message": "bar", "idem_key": "20210601"}}' \
     https://api.github.com/repos/$GH_ORG/$GH_REPO/dispatches
 ```
