@@ -35,6 +35,7 @@
             "type": "python",
             "request": "launch",
             "program": "backend/main.py",
+            "envFile": "${workspaceFolder}/.env",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args" : ["noargs"]

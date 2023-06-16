@@ -28,10 +28,12 @@ def test_cache_event(message_cache_instance):
 
 def test_is_of_interest(message_cache_instance):
     mc = message_cache_instance
-    is_interesting = mc.is_event_of_interest('junkjunkjunk')
+    is_interesting = mc.is_event_of_interest(msg='junkjunkjunk')
     assert not is_interesting
 
-    expected_value = mc.expected_data[3]
+    idem_key = mc.current_idempotency_key
+    expected_value = mc.expected_data[idem_key][3]
+    LOGGER.debug(f"expected_value: {expected_value}")
     assert mc.is_event_of_interest(expected_value)
 
 def test_is_all_data_there(message_cache_instance):
@@ -42,8 +44,9 @@ def test_is_all_data_there(message_cache_instance):
         mc.cached_events[mc.current_idempotency_key] = []
 
     # now setup for a pass
-    mc.cached_events[mc.current_idempotency_key] = mc.expected_data
-    assert mc.is_all_data_there()
+    mc.cached_events[mc.current_idempotency_key] = mc.expected_data[mc.current_idempotency_key]
+    data_exists = mc.is_all_data_there()
+    assert data_exists
 
     # rearrange the order a bit
     value = mc.cached_events[mc.current_idempotency_key].pop(7)
@@ -58,13 +61,15 @@ def test_is_all_data_there_operational_data(message_cache_instance_operation_dat
     #                                                           CMC_reg_PRATE_SFC_0_ps10km_2023060606_P040.grib2
     mc = message_cache_instance_operation_data
 
-    data_there = mc.is_all_data_there(idemkey='20230608')
+    data_there = mc.is_all_data_there(idem_key='20230608')
     LOGGER.debug(f"data_there: {data_there}")
     assert data_there
 
-def test_is_all_data_there_startup_emits_event():
+def test_is_all_data_there_startup_emits_event(message_cache_instance_operation_data):
     # verifies that if the database has all the events it is expecting it will
     # proceed to with whatever action is configured.
+    mc = message_cache_instance_operation_data
+    mc.check_for_unemitted_events()
     pass
 
 # args fixture_name, test params, indirect=True
@@ -73,6 +78,21 @@ def test_is_all_data_there_startup_emits_event():
 #     mc = message_cache_instance_with_data
 #     mc.is_all_data_there(idem_key='20230422')
 #     pass
+
+def test_get_idem_keys(message_cache_instance_operation_data):
+    """verifies that the method to query the idempotency keys from the database
+    is working correctly.
+
+    :param message_cache_instance_operation_data: a fixture that returns a message
+        cache instance that is configured to use the a database with some real
+        data in it
+    :type message_cache_instance_operation_data: db.message_cache.MessageCache
+    """
+    mc = message_cache_instance_operation_data
+    idem_keys  = mc.get_cached_id_keys()
+
+    LOGGER.debug(f"idem_keys: {idem_keys}")
+    assert '20230608' in idem_keys
 
 def test_cache_filter(message_cache_instance_operation_data):
     # either this message isn't getting emitted, or the filter isn't
@@ -111,7 +131,7 @@ def test_clear_cache(message_cache_instance_with_data):
             mc.cache_event(msg, key)
 
     # now clear the cache
-    mc.clear_cache(idemkey=key2)
+    mc.clear_cache(idem_key=key2)
     # get events that are left in the db
     events_from_db = mc.get_cached_events()
     # make sure the key that was cleared is no longer in the db

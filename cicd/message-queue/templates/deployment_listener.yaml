@@ -28,12 +28,13 @@ spec:
       containers:
         - name: {{ .Values.app.name }}
           image: >-
-            {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+            {{ .Values.image.image_registry }}/{{ .Release.Namespace }}/{{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
+          #{{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}:{{ .Values.image.image_tag }}
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 15
             failureThreshold: 10
 
@@ -41,7 +42,7 @@ spec:
             httpGet:
               path: /healthz
               port: 8000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 15
             failureThreshold: 10
 
@@ -67,17 +68,32 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
                   key: ampq_server
+            - name: GH_ORG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  key: gh-org
+            - name: GH_REPO
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  key: gh-repo
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  key: gh-access-token
+
           volumeMounts:
             - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
               mountPath: {{ .Values.app.pvc_mount_point }}
           resources:
             limits:
-              cpu: 100m
-              memory: 150Mi
+              cpu: 150m
+              memory: 750Mi
             requests:
-              cpu: 15m
-              memory: 75Mi
-
+              cpu: 50m
+              memory: 125Mi
 
       restartPolicy: Always
       terminationGracePeriodSeconds: 30

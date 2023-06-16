@@ -1,0 +1,17 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: volume-debugger
+spec:
+  volumes:
+    - name: data-volume
+      persistentVolumeClaim:
+       claimName: messagesubscriber-messagesubscriber-listener
+  containers:
+    - name: debugger
+      #image: busybox
+      image: ghcr.io/bcgov/datamart_listener:20230614-2005
+      command: ['sleep', '3600']
+      volumeMounts:
+        - mountPath: "/data"
+          name: data-volume

@@ -45,6 +45,12 @@ python3 -m venv venv
 pip install -r requirements.txt -r requirements-dev.txt
 # start the backend process
 python backend/main.py
+
+# or run through uvicorn
+export DB_FILE_PATH=sqlite:///../data/event_database.db
+dotenv
+cd backend
+uvicorn main:app --port=8000 --host=0.0.0.0
 ```
 
 #### environment variables used by the subscriber
@@ -65,3 +71,42 @@ Run the image
 `docker run --env-file=.env -v $PWD/cmc_cansip/data:/data  -p 8000:8000 listener:listener`
 
 Once the image is running check the healthz end point
+
+# Remote job trigger
+
+the following is an example of calling a github action that has a remote_workflow
+execution type defined for it:
+
+curl -H "Accept: application/vnd.github.everest-preview+json" \
+    -H "Authorization: token <insert github personal access toke>" \
+    --request POST \
+    --data '{"event_type": "<the type defined for the action>", "message": "mymessage"}' \
+    https://api.github.com/repos/<repo-org>/<repository_name>/dispatches
+
+The following is an example of a job that has been triggered using a webhook:
+https://github.com/bcgov/nr-rfc-grib-copy/actions/runs/5273197792/jobs/9536328668
+
+Recieving this in a github action:
+
+``` yaml
+...
+jobs:
+  build:
+    name: Run Some Thing
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          MESSAGE: ${{ github.event.client_payload.message }}
+        name: Do Something
+        run: |
+          echo Doing Something...
+          echo Incomming message: $MESSAGE
+```
+
+should print out:
+
+```
+Doing Something...
+Incomming message: mymessage
+```
+
