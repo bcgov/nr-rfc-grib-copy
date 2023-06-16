@@ -25,6 +25,9 @@ jobs:
           echo Incomming message: $MESSAGE
           echo "payload as json: ${{ toJson(github.event.client_payload) }} | jq ."
           echo "payload as json: ${{ toJson(github.event.client_payload) }} | jq .message"
+          jsonstr=$(${{ toJson(github.event.client_payload) }} | tr -d '\n')
+          echo jsonstr: $jsonstr
+          $(cat junk.txt | tr  -d '\n' | jq .idem_key | tr -d '"')
           var=$(${{ toJson(github.event.client_payload) }} | jq .message)
           echo "var: $var"
           echo "payload non json: ${{ github.event.client_payload }}"
