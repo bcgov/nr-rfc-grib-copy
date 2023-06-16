@@ -79,15 +79,18 @@ class CMC_Grib_Callback:
         github_org = util.config.GH_ORG
         github_repo = util.config.GH_REPO
         github_token = util.config.GH_TOKEN
+        remote_type = 'run-cmc-grib-download'
+        #remote_type = 'do-something' # test job
 
-        payload = {"event_type": "do-something", "client_payload": {"idem_key": f"{idem_key}","message":"demo"}}
+        payload = {"event_type": remote_type, "client_payload": {"idem_key": f"{idem_key}","message":"demo"}}
         header = {"Accept": "application/vnd.github+json", "Authorization": f"token {github_token}"}
         url = f'https://api.github.com/repos/{github_org}/{github_repo}/dispatches'
         resp = requests.post(url=url, headers=header, json=payload)
-        resp.raise_for_status()
+        #resp.raise_for_status()
         LOGGER.info(f"webhook call to github action status: {resp.status_code}")
 
         # TODO: commenting this out until the downstream events are configured
         #       so that we do not lose the events that are currently being cached
         #       in the database.
-        #self.mc.clear_cache(idem_key=idem_key)
+        if resp.ok:
+            self.mc.clear_cache(idem_key=idem_key)

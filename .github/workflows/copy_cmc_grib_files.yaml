@@ -9,6 +9,8 @@ on:
   schedule:
     - cron: '31 13 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: run-cmc-grib-download
 
 jobs:
   dl_cansip_grib2:
@@ -55,8 +57,11 @@ jobs:
       shell: bash
       run: |
         ls -la
+
     - id: download__cmc_grib
       name: download grib files
       shell: bash
+      - env:
+          DATESTR: ${{ github.event.client_payload.idem_key }}
       run: |
-        python scripts/src/main_cmc.py
+        python scripts/src/main_cmc.py $DATESTR
