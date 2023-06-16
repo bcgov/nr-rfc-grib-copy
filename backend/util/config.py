@@ -35,7 +35,7 @@ GH_TOKEN = os.getenv('GH_TOKEN')
 
 # using this parameter to alter the queue name when running locally vs in oc
 DEBUG = os.getenv('DEBUG', False)
-if DEBUG.isnumeric():
+if (not isinstance(DEBUG, bool)) and DEBUG.isnumeric():
     DEBUG = bool(int(DEBUG))
 else:
     DEBUG = bool(DEBUG)

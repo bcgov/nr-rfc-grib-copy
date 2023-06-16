@@ -108,6 +108,40 @@ class MessageCache:
 
         return keys
 
+    # def check_for_unemitted_events(self):
+    #     """ get the data that is in the database,
+    #         iterate over the unique id keys,
+    #         check to see if the data is there for the days that exist.
+    #         emit the events associated if all the data is there
+    #         get some kind of confirmation that the request was triggered
+    #         delete all the data associated with the id keys that were emitted
+    #     """
+    #     un_emitted_idem_keys = self.get_cached_id_keys()
+    #     for idem_key in un_emitted_idem_keys:
+    #         if self.is_all_data_there(idem_key=idem_key):
+    #             LOGGER.info(f"all data there for: {idem_key}")
+
+
+    def get_cached_id_keys(self):
+        """makes a database call to get all the id's that are currently in the
+        database.
+        """
+        keys = []
+        with Session(self.engine) as session:
+            rows = session.query(db.model.Events.event_idempotency_key).distinct()
+            #statement = select(db.model.Events.event_idempotency_key)
+            #rows = session.execute(statement).all()
+            for row in rows:
+                #LOGGER.debug(f"row: {row}")
+                keys.append(row[0])
+        LOGGER.debug(f"number of cached ids: {len(keys)}")
+        if len(keys) > 4:
+            LOGGER.debug(f"sample keys: {keys[:3]}")
+        else:
+            LOGGER.debug(f"sample keys: {keys}")
+
+        return keys
+
     def init_db(self):
         """if the database doesn't have the tables in it, then create them"""
         inspector = inspect(self.engine)
