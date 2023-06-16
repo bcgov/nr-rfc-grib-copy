@@ -64,4 +64,4 @@ jobs:
       - env:
           DATESTR: ${{ github.event.client_payload.idem_key }}
       run: |
-        python scripts/src/main_cmc.py
+        python scripts/src/main_cmc.py $DATESTR
