@@ -52,16 +52,16 @@ jobs:
         chmod +x wgrib2
         mv wgrib2 $WGRIB_UTILITY
 
+    - id: download_cmc_grib
+      name: download grib files
+      shell: bash
+      env:
+        DATESTR: ${{ github.event.client_payload.idem_key }}
+      run: |
+        python scripts/src/main_cmc.py $DATESTR
+
     # - id: debug
     #   name: debug and list files
     #   shell: bash
     #   run: |
     #     ls -la
-
-    - id: download_cmc_grib
-      name: download grib files
-      shell: bash
-      - env:
-          DATESTR: ${{ github.event.client_payload.idem_key }}
-      run: |
-        python scripts/src/main_cmc.py $DATESTR
