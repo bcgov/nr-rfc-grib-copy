@@ -20,10 +20,8 @@ jobs:
       - env:
           MESSAGE: ${{ github.event.client_payload.message }}
           DATESTR: ${{ github.event.client_payload.idem_key }}
-          JSONSTR: ${{ github.event.client_payload }}
         name: Do Something
         run: |
           echo Doing Something...
           echo Incomming message: $MESSAGE
           echo Date is: $DATESTR
-          echo JSONSTR is: $JSONSTR
