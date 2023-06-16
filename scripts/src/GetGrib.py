@@ -18,8 +18,13 @@ LOGGER = logging.getLogger(__name__)
 #       in the backend.  Should use that func vs what is in here
 
 class GetGrib:
-    def __init__(self, dest_folder:str, config: GetGribConfig.GribConfig):
+    def __init__(self, dest_folder:str, config: GetGribConfig.GribConfig, date_str=None):
+        self.date_str = date_str
+
         self.config = config
+        if not date_str:
+            self.date_str = self.config.datestr
+
         self.set_dest_folder(dest_folder)
 
     def set_dest_folder(self, dest_folder):
@@ -29,9 +34,12 @@ class GetGrib:
 
         :param dest_folder: a string that defines the destination folder for any
             grib data that will be downloaded using this module
+        :param date_str: a string that defines the date that the data will be
+            processed.  If none is provided then defaults to the current date
+            format for the datestr should be %Y%m%d (YYYYMMDD)
         :type dest_folder: str
         """
-        self.dest_folder = os.path.join(dest_folder, self.config.datestr)
+        self.dest_folder = os.path.join(dest_folder, self.date_str)
         if not os.path.exists(self.dest_folder):
             os.makedirs(self.dest_folder)
         self.dest_folder = os.path.realpath(self.dest_folder)
@@ -264,9 +272,10 @@ class CoalateGribOutput:
 
 
 class CopyCMC2ObjectStorage:
-    def __init__(self):
+    def __init__(self, date_str=None):
+        self.date_str = date_str
         self.objstor = ObjectStore.ObjectStoreUtil()
-        self.grib_confs = GetGribConfig.GribConfigCollection()
+        self.grib_confs = GetGribConfig.GribConfigCollection(self.date_str)
 
     def copy_to_ostore(self, src_folder, ostore_folder):
 

@@ -17,7 +17,7 @@ the image that is getting built in the github action.
 ```bash
 cd cicd
 helm upgrade --install \
---set github_secrets.access-token=$GH_TOKEN \
+--set github_secrets.access_token=$GH_TOKEN \
 message-queue \
 message-queue
 ```

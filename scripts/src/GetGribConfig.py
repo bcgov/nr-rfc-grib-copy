@@ -24,6 +24,7 @@ class GribConfig(metaclass=abc.ABCMeta):
     :param metaclass: declaring as an Abstract base class, defaults to
                       abc.ABCMeta
     """
+    _datestr = None
 
     @property
     @abc.abstractmethod
@@ -66,10 +67,19 @@ class GribConfig(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @property
+    #@abc.abstractmethod
     def datestr(self):
-        now = datetime.datetime.now(self.timezone)
-        datestr = now.strftime(self.date_str_format)
-        return datestr
+        if self._datestr is None:
+            now = datetime.datetime.now(self.timezone)
+            self._datestr = now.strftime(self.date_str_format)
+            return self._datestr
+        return self._datestr
+
+    @datestr.setter
+    #@abc.abstractmethod
+    def datestr(self, value):
+        self._datestr = value
+
 
     def get_iterator(self):
         """
@@ -463,7 +473,8 @@ class GribGlobal_2(GribConfig):
 
 
 class GribConfigCollection:
-    def __init__(self):
+    def __init__(self, date_str=None):
+        self.date_str = date_str
         self.cls_dict = self._get_class_dict()
 
     def get_class_dict(self):
@@ -494,6 +505,9 @@ class GribConfigCollection:
 
             if cls_mem[1].__class__ is abc.ABCMeta and not inspect.isabstract(class_inst):
                 class_dict[class_name] = constructor()
+                if self.date_str is not None:
+                    LOGGER.debug(f"setting date str for config to: {self.date_str}")
+                    class_dict[class_name].datestr = self.date_str
         return class_dict
 
 
