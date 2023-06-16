@@ -29,6 +29,19 @@ CLOUDAMQP_URL = "CLOUDAMQP_URL"
 MESSAGE_ACK = os.getenv("MESSAGE_ACK", "1")
 MESSAGE_ACK = bool(int(MESSAGE_ACK))
 
+GH_ORG = os.getenv('GH_ORG')
+GH_REPO = os.getenv('GH_REPO')
+GH_TOKEN = os.getenv('GH_TOKEN')
+
+# using this parameter to alter the queue name when running locally vs in oc
+DEBUG = os.getenv('DEBUG', False)
+if DEBUG.isnumeric():
+    DEBUG = bool(int(DEBUG))
+else:
+    DEBUG = bool(DEBUG)
+print(f"DEBUG: {DEBUG}")
+
+
 def get_db_string(ignore_env=False):
     """retrieves the database connection string
 
@@ -43,11 +56,10 @@ def get_db_string(ignore_env=False):
     else:
         db_str = local_db_path
 
-
-
-    # example connection string
+    # example connection strings
     # sqlite:///C:\\sqlitedbs\\school.db
     # sqlite:////path/to/file.db
+    # relative path sqlite:///../path/to/file.db
 
     return db_str
 
@@ -60,6 +72,9 @@ def get_amqp_queue_name():
     config_name = "cmc_gems"
     ampq_user = os.getenv(AMPQ_USERNAME, default_ampq_user)
     q_name = f"q_{ampq_user}.bcgov_listener.{config_name}.{ampq_queue_org}"
+
+    if DEBUG:
+        q_name = f"{q_name}-debug"
     return q_name
 
 

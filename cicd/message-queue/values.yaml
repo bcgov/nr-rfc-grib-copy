@@ -105,3 +105,9 @@ ampq_secrets:
   username: anonymous
   password: anonymous
   domain: hpfx.collab.science.gc.ca
+
+github_secrets:
+  name: ghs
+  org: bcgov
+  repo: nr-rfc-grib-copy
+  access_token: wouldntYouLikeToKnow

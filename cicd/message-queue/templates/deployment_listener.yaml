@@ -68,17 +68,32 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
                   key: ampq_server
+            - name: GH_ORG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  key: gh-org
+            - name: GH_REPO
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  key: gh-repo
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  key: gh-access-token
+
           volumeMounts:
             - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
               mountPath: {{ .Values.app.pvc_mount_point }}
           resources:
             limits:
               cpu: 150m
-              memory: 400Mi
+              memory: 750Mi
             requests:
               cpu: 50m
               memory: 125Mi
-
 
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
