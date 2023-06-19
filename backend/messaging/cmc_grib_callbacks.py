@@ -12,6 +12,9 @@ LOGGER = logging.getLogger(__name__)
 class CMC_Grib_Callback:
 
     def __init__(self):
+        # load any residual transactions possibly
+        self.emit_cnt = 0
+
         # init db connection
         self.mc = db.message_cache.MessageCache()
 
@@ -24,8 +27,6 @@ class CMC_Grib_Callback:
         # TODO: check for multiple idem keys and figure out logic for those
         self.emit_cached_events()
 
-        # load any residual transactions possibly
-        self.emit_cnt = 0
 
     def emit_cached_events(self):
         idem_keys = self.mc.get_cached_id_keys()
@@ -91,6 +92,7 @@ class CMC_Grib_Callback:
             resp = requests.post(url=url, headers=header, json=payload)
             #resp.raise_for_status()
             LOGGER.info(f"webhook call to github action status: {resp.status_code}")
+            LOGGER.debug(f"url: {url}")
 
             # TODO: commenting this out until the downstream events are configured
             #       so that we do not lose the events that are currently being cached

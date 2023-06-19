@@ -10,7 +10,7 @@ spec:
   containers:
     - name: debugger
       #image: busybox
-      image: ghcr.io/bcgov/datamart_listener:20230614-2005
+      image: ghcr.io/bcgov/datamart_listener:20230616-2329
       command: ['sleep', '3600']
       volumeMounts:
         - mountPath: "/data"
