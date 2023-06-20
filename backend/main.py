@@ -54,7 +54,7 @@ listener = messaging.listener.AsyncioDataMart(
 
 # setup the api
 app = fastapi.FastAPI()
-router = messaging.api_routes.API_Routes(listener)
+router = messaging.api_routes.API_Routes(listener, grib_callback)
 app.include_router(router.router)
 
 @app.on_event("startup")
@@ -72,4 +72,4 @@ async def startup() -> None:
 if __name__ == "__main__":
     # adding this script to run through the debugger
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

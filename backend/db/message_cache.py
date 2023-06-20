@@ -242,6 +242,44 @@ class MessageCache:
         # LOGGER.debug(f"missing files: {missing_files}")
         return all_there
 
+    def get_missing(self):
+        """if idem key is provided restricts results to just that idem key,
+        otherwise will return a dict with all the idem keys and the missing
+        data, as an associated list
+
+        :param idem_key: a datestr in the format YYYYMMDD, defaults to None
+        :type idem_key: str, optional
+        """
+        idem_keys = self.get_cached_id_keys()
+        missing_files = {}
+        for idem_key in idem_keys:
+            if idem_key not in self.expected_data:
+                self.expected_data[idem_key] = self.grib_config.calculate_expected_file_list(
+                    only_file_path=True, date_str=idem_key
+                )
+
+
+            if idem_key not in self.cached_events:
+                missing_files[idem_key] = self.expected_data[idem_key]
+            else:
+                for expected_file in self.expected_data[idem_key]:
+                    if expected_file not in self.cached_events[idem_key]:
+                        if idem_key not in missing_files:
+                            missing_files[idem_key] = []
+                        missing_files[idem_key].append(expected_file)
+        missing_file_cnt = 0
+        for idem_key in missing_files:
+            missing_files[idem_key] = list(set(missing_files[idem_key]))
+            missing_file_cnt = missing_file_cnt + len(missing_files[idem_key])
+            if len(missing_files[idem_key]) < 5:
+                LOGGER.info(f"missing files for {idem_key}: {missing_files[idem_key]}")
+            else:
+                LOGGER.info(f"for {idem_key} first 5 of  {len(missing_files[idem_key])} missing files: {missing_files[idem_key][:5]}")
+
+        LOGGER.info(f"number of missing files: {missing_file_cnt}")
+        return missing_files
+
+
     def clear_cache(self, idem_key=None):
         """when all the data we are expecting has been provided and passed on
         to the next process we will need to clear the cache.  That is what
@@ -292,3 +330,11 @@ class MessageCache:
             result_set = session.query(db.model.Events).all()
             LOGGER.debug(f"events retrieved from db: {len(result_set)}")
         return result_set
+
+    def get_message_count(self):
+        """returns the number of events that are in the database"""
+        count = 0
+        with self.session_maker() as session:
+            count = session.query(db.model.Events).count()
+            LOGGER.debug(f"message count: {count}")
+        return count
