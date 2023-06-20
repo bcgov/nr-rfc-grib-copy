@@ -41,6 +41,8 @@ else:
     DEBUG = bool(DEBUG)
 print(f"DEBUG: {DEBUG}")
 
+ZONE = os.getenv("ZONE", "DEV")
+
 
 def get_db_string(ignore_env=False):
     """retrieves the database connection string
@@ -75,6 +77,8 @@ def get_amqp_queue_name():
 
     if DEBUG:
         q_name = f"{q_name}-debug"
+    else:
+        q_name = f"{q_name}-{ZONE}"
     return q_name
 
 
