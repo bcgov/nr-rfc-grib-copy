@@ -120,7 +120,7 @@ class AsyncioDataMart(object):
 
         val = self._channel.queue_declare(
             queue=queue_name,
-            auto_delete=True,
+            auto_delete=False,
             durable=True,
             callback=self.on_queue_declareok
         )

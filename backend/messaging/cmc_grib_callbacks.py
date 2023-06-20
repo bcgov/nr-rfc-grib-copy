@@ -61,11 +61,11 @@ class CMC_Grib_Callback:
 
         # is this an event we are interested in, working on the current date that
         # has been calculated in the message cache property 'current_idempotency_key'
-        if self.mc.is_event_of_interest(emitted_file_name):
+        if self.mc.is_event_of_interest(emitted_file_name, idem_key=date_str):
             # check to see if all the events are available.
-            if self.mc.is_all_data_there():
+            if self.mc.is_all_data_there(idem_key=date_str):
                 LOGGER.info(f"data complete for idem key: {self.mc.current_idempotency_key}")
-                self.emit_event()
+                self.emit_event(idem_key=date_str)
         LOGGER.debug("acknowledging message")
         if self.ack:
             channel.basic_ack(delivery_tag)
@@ -84,20 +84,22 @@ class CMC_Grib_Callback:
         remote_type = 'run-cmc-grib-download'
         #remote_type = 'do-something' # test job
 
-        if self.emit_cnt > 0:
+        # if self.emit_cnt > 0:
 
-            payload = {"event_type": remote_type, "client_payload": {"idem_key": f"{idem_key}","message":"demo"}}
-            header = {"Accept": "application/vnd.github+json", "Authorization": f"token {github_token}"}
-            url = f'https://api.github.com/repos/{github_org}/{github_repo}/dispatches'
-            resp = requests.post(url=url, headers=header, json=payload)
-            #resp.raise_for_status()
-            LOGGER.info(f"webhook call to github action status: {resp.status_code}")
-            LOGGER.debug(f"url: {url}")
+        payload = {"event_type": remote_type, "client_payload": {"idem_key": f"{idem_key}","message":"demo"}}
+        header = {"Accept": "application/vnd.github+json", "Authorization": f"token {github_token}"}
+        url = f'https://api.github.com/repos/{github_org}/{github_repo}/dispatches'
+        resp = requests.post(url=url, headers=header, json=payload)
+        #resp.raise_for_status()
+        LOGGER.info(f"webhook call to github action status: {resp.status_code}")
+        LOGGER.debug(f"url: {url}")
 
-            # TODO: commenting this out until the downstream events are configured
-            #       so that we do not lose the events that are currently being cached
-            #       in the database.
-            if resp.ok:
-                self.mc.clear_cache(idem_key=idem_key)
+        # TODO: commenting this out until the downstream events are configured
+        #       so that we do not lose the events that are currently being cached
+        #       in the database.
+        if resp.ok:
+            self.mc.clear_cache(idem_key=idem_key)
+        else:
+            LOGGER.error(f"webhook call to github action failed: {resp.status_code} idem_key: {idem_key} url: {url}")
 
         self.emit_cnt += 1
