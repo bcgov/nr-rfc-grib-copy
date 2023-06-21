@@ -131,7 +131,7 @@ jobs:
         cd cicd
         ls -la
 
-        #         helm upgrade --install message-queue message-queue \
+        # helm upgrade --install message-queue message-queue \
 
         helm upgrade --install message-queue-${{ env.ZONE }} message-queue \
         --set image.image_tag=${{ env.IMAGE_TAG }} \
