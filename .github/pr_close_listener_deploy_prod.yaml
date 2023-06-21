@@ -1,0 +1,99 @@
+name: Pull Request Closed
+
+on:
+  pull_request:
+    types:
+      - closed
+
+  workflow_dispatch:
+
+jobs:
+  # Clean up OpenShift when PR closed, no conditions
+  cleanup-openshift:
+    name: Cleanup OpenShift
+    runs-on: ubuntu-22.04
+    environment: dev
+
+    steps:
+    - name: Log in and set context
+      uses: redhat-actions/oc-login@v1
+      with:
+        openshift_server_url: ${{ vars.OC_SERVER }}
+        openshift_token: ${{ secrets.OC_TOKEN }}
+        namespace: ${{ vars.OC_NAMESPACE }}
+
+    - name: Calculate Zone
+      id: calculateZone
+      shell: bash
+      run: |
+        event_num=${{ github.event.number }}
+        if [[ -z "${event_num// }" ]]; then
+          zone=pr-999
+        else
+          zone=pr-$event_num
+        fi
+        echo zone: $zone
+        echo "ZONE=$zone" >> $GITHUB_ENV
+
+    - name: Uninstall helm chart
+      run: |
+        helm uninstall message-queue-${{ env.ZONE }}
+
+  # If merged into main, then handle any image promotions
+  image-promotions:
+    name: Image Promotions
+    # TODO: uncomment once working
+    #if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-22.04
+    environment: prod
+    permissions:
+      packages: write
+    steps:
+
+    # to help debug this action, logic to get the sha depending
+    # on different trigger types.
+    - name: Calculate Repo Commit Sha
+      id: calcRepoCommitSha
+      shell: bash
+      run: |
+        event_num=${{ github.event.number }}
+        if [[ -z "${event_num// }" ]]; then
+          sha=${{ github.event.push.head.sha }}
+        else
+          sha=${{ github.event.pull_request.head.sha }}
+        fi
+        echo sha: $sha
+        echo "COMMIT_SHA=$sha" >> $GITHUB_ENV
+
+
+    - uses: actions/checkout@v3
+      id: checkout
+      with:
+        ref: ${{ env.COMMIT_SHA }}
+
+    - name: Log in and set context
+      uses: redhat-actions/oc-login@v1
+      with:
+        openshift_server_url: ${{ vars.OC_SERVER }}
+        openshift_token: ${{ secrets.OC_TOKEN }}
+        namespace: ${{ vars.OC_NAMESPACE }}
+
+    - name: Upgrade chart
+      id: upgradeHelmChart
+      shell: bash
+      run: |
+        cd cicd
+        zone=prod
+        imagetag=pr-${{ github.event.number }}
+        echo Running Helm Chart
+
+        # run helm
+        # ---------------------------------
+        helm upgrade --install datamart_listener-$zone datamart_listener \
+        --set image.image_tag=$imagetag \
+        --set image.promote=bcgov/datamart_listener:$imagetag \
+        --set app.zone=$zone \
+        --set github_secrets.access_token=${{ secrets.CMC-remote }}
+
+
+        echo Helm Chart Complete
