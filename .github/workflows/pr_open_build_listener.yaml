@@ -132,7 +132,8 @@ jobs:
       run: |
         cd cicd
         ls -la
-        helm upgrade --install message-queue-${{ env.ZONE }} message-queue \
+        #helm upgrade --install message-queue-${{ env.ZONE }} message-queue \
+        helm upgrade --install message-queue message-queue \
         --set image.image_tag=${{ env.IMAGE_TAG }} \
         --set image.promote=bcgov/message-queue:${{ env.IMAGE_TAG }} \
         --set app.zone=${{ env.ZONE }} \
