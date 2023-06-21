@@ -89,6 +89,7 @@ image:
   #promote: bcgov/nr-rfc-grib-copy/datamart_listener:prod
   promote: bcgov/datamart_listener:20230621-0247
   image_registry: image-registry.openshift-image-registry.svc:5000
+  image_name: datamart_listener
 
 config:
   cpu_request: "25m"
