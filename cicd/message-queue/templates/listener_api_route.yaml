@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: {{ .Values.app.name }}-{{ .Values.app.zone }}
+  name: {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}
+spec:
+  host: {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}.{{.Values.image.domain}}
+  port:
+    targetPort: {{ .Values.app.api_port}}-tcp
+  to:
+    kind: Service
+    name: {{ .Values.app.name}}-{{ .Values.app.zone }}-{{ .Values.app.component }}
+    weight: 100
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

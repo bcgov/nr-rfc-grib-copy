@@ -13,6 +13,8 @@ ampq_params = {"heartbeat": 600, "blocked_connection_timeout": 300}
 ampq_queue_org = "bcgov_rfc"
 ampq_queue_topic_desc = "gems_reg_and_global"
 
+# this is all published / public information so no need to hide it
+# https://eccc-msc.github.io/open-data/msc-datamart/amqp_en/
 default_ampq_user = "anonymous"
 default_ampq_password = "anonymous"
 default_ampq_exchange = "xpublic"
