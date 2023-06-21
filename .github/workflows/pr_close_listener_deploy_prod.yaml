@@ -89,7 +89,7 @@ jobs:
 
         # run helm
         # ---------------------------------
-        helm upgrade --install datamart_listener-$zone datamart_listener \
+        helm upgrade --install message-queue-$zone message-queue \
         --set image.image_tag=$imagetag \
         --set image.promote=bcgov/datamart_listener:$imagetag \
         --set app.zone=$zone \
