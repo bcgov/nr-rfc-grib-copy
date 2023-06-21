@@ -33,7 +33,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8000
+              port: {{ .Values.app.api_port }}
             initialDelaySeconds: 60
             periodSeconds: 15
             failureThreshold: 10
@@ -41,13 +41,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 8000
+              port: {{ .Values.app.api_port }}
             initialDelaySeconds: 30
             periodSeconds: 15
             failureThreshold: 10
 
           ports:
-            - containerPort: 8000
+            - containerPort: {{ .Values.app.api_port }}
               protocol: TCP
           imagePullPolicy: Always
           env:
@@ -83,6 +83,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
                   key: gh-access-token
+            - name: ZONE
+              value: {{ .Values.app.zone }}
 
           volumeMounts:
             - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}

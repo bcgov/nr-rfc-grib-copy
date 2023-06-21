@@ -9,7 +9,7 @@ the image that is getting built in the github action.
 
 2. grab the image tag from ghcr and update the values.yaml parameter for `image_tag` and `promote`
 
-3. populate the environment variables:
+3. populate the environment variables from the .env file:
     `set -o allexport; source .env; set +o allexport`
 
 3. deploy the helm chart:
