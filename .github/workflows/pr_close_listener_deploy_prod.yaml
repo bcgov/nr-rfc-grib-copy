@@ -93,7 +93,6 @@ jobs:
         --set image.image_tag=$imagetag \
         --set image.promote=bcgov/datamart_listener:$imagetag \
         --set app.zone=$zone \
-        --set github_secrets.access_token=${{ secrets.CMC-remote }}
-
+        --set github_secrets.access_token=${{ secrets.CMC_TOKEN }}
 
         echo Helm Chart Complete

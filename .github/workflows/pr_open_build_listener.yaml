@@ -127,7 +127,7 @@ jobs:
       shell: bash
       env:
         IMAGE_TAG: ${{ needs.CalculateImageTags.outputs.imagetag }}
-        ACCESS_TOKEN: ${{ secrets.CMC-remote }}
+        ACCESS_TOKEN: ${{ secrets.CMC_TOKEN }}
       run: |
         cd cicd
         ls -la
