@@ -8,12 +8,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 class API_Routes:
-    def __init__(self, listener):
+    def __init__(self, listener, grib_callback):
         self.router = fastapi.APIRouter()
         self.listener = listener
+        self.mc = grib_callback.mc
         self.router.add_api_route("/healthz", self.health, methods=["GET"])
         self.router.add_api_route("/", self.root, methods=["GET"])
-        self.router.add_api_route("/msg_id", self.message_count, methods=["GET"])
+        self.router.add_api_route("/cached_msgs_cnt", self.message_count, methods=["GET"])
+        self.router.add_api_route("/missing_msgs", self.get_missing_messages, methods=["GET"])
 
     async def health(self, response: fastapi.Response):
         payload = {"status": "ok"}
@@ -33,5 +35,9 @@ class API_Routes:
         return {"message": "Hello World"}
 
     async def message_count(self):
-        return {'messageid': self.listener.cur_message_tag}
+        message_cnt = self.mc.get_message_count()
+        return {'messageid': message_cnt}
 
+    async def get_missing_messages(self):
+        missing_struct = self.mc.get_missing()
+        return {'missing_struct': missing_struct}

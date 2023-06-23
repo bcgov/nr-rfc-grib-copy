@@ -50,7 +50,7 @@ python backend/main.py
 export DB_FILE_PATH=sqlite:///../data/event_database.db
 dotenv
 cd backend
-uvicorn main:app --port=8000 --host=0.0.0.0
+uvicorn main:app --port=8000 --host=0.0.0.0 --reload
 ```
 
 #### environment variables used by the subscriber

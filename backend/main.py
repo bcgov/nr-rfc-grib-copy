@@ -54,7 +54,7 @@ listener = messaging.listener.AsyncioDataMart(
 
 # setup the api
 app = fastapi.FastAPI()
-router = messaging.api_routes.API_Routes(listener)
+router = messaging.api_routes.API_Routes(listener, grib_callback)
 app.include_router(router.router)
 
 @app.on_event("startup")
