@@ -41,5 +41,3 @@ class API_Routes:
     async def get_missing_messages(self):
         missing_struct = self.mc.get_missing()
         return {'missing_struct': missing_struct}
-
-

@@ -127,6 +127,7 @@ jobs:
       shell: bash
       env:
         IMAGE_TAG: ${{ needs.CalculateImageTags.outputs.imagetag }}
+        ACCESS_TOKEN: ${{ secrets.CMC-remote }}
       run: |
         cd cicd
         ls -la
@@ -137,7 +138,7 @@ jobs:
         --set image.image_tag=${{ env.IMAGE_TAG }} \
         --set image.promote=bcgov/datamart_listener:${{ env.IMAGE_TAG }} \
         --set app.zone=${{ env.ZONE }} \
-        --set github_secrets.access_token=${{ secrets.CMC-remote }}
+        --set github_secrets.access_token=${{ env.ACCESS_TOKEN }}
 
 
 #docker pull ghcr.io/bcgov/datamart_listener:20230621-0332

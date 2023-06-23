@@ -297,6 +297,7 @@ class MessageCache:
             # stmt = delete(db.model.Events).all()
             session.execute(stmt)
             session.commit()
+            LOGGER.info(f"cache has been cleared for idem_key: {idem_key}")
 
         # now get rid of the in memory struct
         if idem_key in self.cached_events:

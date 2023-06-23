@@ -34,6 +34,11 @@ MESSAGE_ACK = bool(int(MESSAGE_ACK))
 GH_ORG = os.getenv('GH_ORG')
 GH_REPO = os.getenv('GH_REPO')
 GH_TOKEN = os.getenv('GH_TOKEN')
+required_params = [GH_ORG, GH_REPO, GH_TOKEN]
+for param in required_params:
+    if param is None:
+        msg = f"the env var: {param} is required and has not been set"
+        raise Exception(msg)
 
 # using this parameter to alter the queue name when running locally vs in oc
 DEBUG = os.getenv('DEBUG', False)
