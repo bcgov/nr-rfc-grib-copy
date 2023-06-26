@@ -43,7 +43,7 @@ jobs:
   image-promotions:
     name: Image Promotions
     # TODO: uncomment once working
-    #if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-22.04
     environment: prod
     permissions:
