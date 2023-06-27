@@ -30,6 +30,7 @@ LOGGER.info(f"log config: {log_file_path}")
 async_listener = None
 
 # setup the message cache
+LOGGER.info('setting up message cache...')
 grib_callback = messaging.cmc_grib_callbacks.CMC_Grib_Callback()
 
 # setup the queue and exchange parameters
