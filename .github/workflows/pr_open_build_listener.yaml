@@ -19,6 +19,7 @@ on:
       - scripts/**
       - .flake8
       - COMPLIANCE.yaml
+      - docs/**
   workflow_dispatch:
 
 jobs:
