@@ -159,4 +159,4 @@ jobs:
       uses: thollander/actions-comment-pull-request@v2
       with:
         message: |
-          Route to deployed app is: ${{ env.OC_ROUTE }}
+          Route to deployed app is: ${{ env.OC_ROUTE }}/docs
