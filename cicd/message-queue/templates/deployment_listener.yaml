@@ -91,8 +91,8 @@ spec:
               mountPath: {{ .Values.app.pvc_mount_point }}
           resources:
             limits:
-              cpu: 150m
-              memory: 750Mi
+              cpu: 200m
+              memory: 900Mi
             requests:
               cpu: 50m
               memory: 125Mi
