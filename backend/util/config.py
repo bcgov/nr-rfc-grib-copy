@@ -31,9 +31,9 @@ CLOUDAMQP_URL = "CLOUDAMQP_URL"
 MESSAGE_ACK = os.getenv("MESSAGE_ACK", "1")
 MESSAGE_ACK = bool(int(MESSAGE_ACK))
 
-GH_ORG = os.getenv('GH_ORG')
-GH_REPO = os.getenv('GH_REPO')
-GH_TOKEN = os.getenv('GH_TOKEN')
+GH_ORG = os.getenv("GH_ORG")
+GH_REPO = os.getenv("GH_REPO")
+GH_TOKEN = os.getenv("GH_TOKEN")
 required_params = [GH_ORG, GH_REPO, GH_TOKEN]
 for param in required_params:
     if param is None:
@@ -41,7 +41,7 @@ for param in required_params:
         raise Exception(msg)
 
 # using this parameter to alter the queue name when running locally vs in oc
-DEBUG = os.getenv('DEBUG', False)
+DEBUG = os.getenv("DEBUG", False)
 if (not isinstance(DEBUG, bool)) and DEBUG.isnumeric():
     DEBUG = bool(int(DEBUG))
 else:
@@ -49,6 +49,8 @@ else:
 print(f"DEBUG: {DEBUG}")
 
 ZONE = os.getenv("ZONE", "DEV")
+
+DAYS_TO_STALE = os.getenv("DAYS_TO_STALE", 3)
 
 
 def get_db_string(ignore_env=False):

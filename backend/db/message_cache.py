@@ -68,8 +68,11 @@ class MessageCache:
         # getting a list of files that are expected per idem key
         # convert expected data into a dictionary using the idem_key as the key
         self.expected_data = {}
-        self.expected_data[self.current_idempotency_key] = self.grib_config.calculate_expected_file_list(
-            only_file_path=True, date_str=self.current_idempotency_key)
+        self.expected_data[
+            self.current_idempotency_key
+        ] = self.grib_config.calculate_expected_file_list(
+            only_file_path=True, date_str=self.current_idempotency_key
+        )
 
         # # check for unemitted events
         # self.check_for_unemitted_events()
@@ -87,7 +90,6 @@ class MessageCache:
     #         if self.is_all_data_there(idem_key=idem_key):
     #             LOGGER.info(f"all data there for: {idem_key}")
 
-
     def get_cached_id_keys(self):
         """makes a database call to get all the id's that are currently in the
         database.
@@ -95,44 +97,10 @@ class MessageCache:
         keys = []
         with Session(self.engine) as session:
             rows = session.query(db.model.Events.event_idempotency_key).distinct()
-            #statement = select(db.model.Events.event_idempotency_key)
-            #rows = session.execute(statement).all()
+            # statement = select(db.model.Events.event_idempotency_key)
+            # rows = session.execute(statement).all()
             for row in rows:
-                #LOGGER.debug(f"row: {row}")
-                keys.append(row[0])
-        LOGGER.debug(f"number of cached ids: {len(keys)}")
-        if len(keys) > 4:
-            LOGGER.debug(f"sample keys: {keys[:3]}")
-        else:
-            LOGGER.debug(f"sample keys: {keys}")
-
-        return keys
-
-    # def check_for_unemitted_events(self):
-    #     """ get the data that is in the database,
-    #         iterate over the unique id keys,
-    #         check to see if the data is there for the days that exist.
-    #         emit the events associated if all the data is there
-    #         get some kind of confirmation that the request was triggered
-    #         delete all the data associated with the id keys that were emitted
-    #     """
-    #     un_emitted_idem_keys = self.get_cached_id_keys()
-    #     for idem_key in un_emitted_idem_keys:
-    #         if self.is_all_data_there(idem_key=idem_key):
-    #             LOGGER.info(f"all data there for: {idem_key}")
-
-
-    def get_cached_id_keys(self):
-        """makes a database call to get all the id's that are currently in the
-        database.
-        """
-        keys = []
-        with Session(self.engine) as session:
-            rows = session.query(db.model.Events.event_idempotency_key).distinct()
-            #statement = select(db.model.Events.event_idempotency_key)
-            #rows = session.execute(statement).all()
-            for row in rows:
-                #LOGGER.debug(f"row: {row}")
+                # LOGGER.debug(f"row: {row}")
                 keys.append(row[0])
         LOGGER.debug(f"number of cached ids: {len(keys)}")
         if len(keys) > 4:
@@ -153,8 +121,7 @@ class MessageCache:
             LOGGER.info("Creating the database tables")
             db.model.Base.metadata.create_all(bind=self.engine)
         else:
-            LOGGER.info("db already there... table " +
-                        f"{db.model.Events.__tablename__} exists")
+            LOGGER.info("db already there... table " + f"{db.model.Events.__tablename__} exists")
 
     def get_current_idempotency_key(self):
         """because the data is available daily, using the date stamp as the
@@ -201,7 +168,8 @@ class MessageCache:
         if idem_key not in self.expected_data:
             # calculated the expected data list for the date in question
             self.expected_data[idem_key] = self.grib_config.calculate_expected_file_list(
-            only_file_path=True, date_str=idem_key)
+                only_file_path=True, date_str=idem_key
+            )
 
         # LOGGER.debug("input message: ")
         if msg in self.expected_data[idem_key]:
@@ -258,7 +226,6 @@ class MessageCache:
                     only_file_path=True, date_str=idem_key
                 )
 
-
             if idem_key not in self.cached_events:
                 missing_files[idem_key] = self.expected_data[idem_key]
             else:
@@ -274,11 +241,12 @@ class MessageCache:
             if len(missing_files[idem_key]) < 5:
                 LOGGER.info(f"missing files for {idem_key}: {missing_files[idem_key]}")
             else:
-                LOGGER.info(f"for {idem_key} first 5 of  {len(missing_files[idem_key])} missing files: {missing_files[idem_key][:5]}")
+                LOGGER.info(
+                    f"for {idem_key} first 5 of  {len(missing_files[idem_key])} missing files: {missing_files[idem_key][:5]}"
+                )
 
         LOGGER.info(f"number of missing files: {missing_file_cnt}")
         return missing_files
-
 
     def clear_cache(self, idem_key=None):
         """when all the data we are expecting has been provided and passed on
@@ -339,3 +307,37 @@ class MessageCache:
             count = session.query(db.model.Events).count()
             LOGGER.debug(f"message count: {count}")
         return count
+
+    def has_stale(self):
+        stale_keys = self.get_stale()
+        return bool(stale_keys)
+
+    def get_stale(self):
+        LOGGER.debug("stale")
+        stale_idem_keys = []
+        idem_key = self.get_current_idempotency_key()
+        current_key_time = datetime.datetime.strptime(
+            idem_key, util.config.default_datestring_format
+        )
+        difference = datetime.timedelta(days=util.config.DAYS_TO_STALE)
+        expirey_date = current_key_time - difference
+
+        keys = self.get_cached_id_keys()
+        for key in keys:
+            key_time = datetime.datetime.strptime(key, util.config.default_datestring_format)
+            if key_time < expirey_date:
+                LOGGER.debug(f"key: {key} is stale")
+                stale_idem_keys.append(key)
+        return stale_idem_keys
+
+
+    def flush_stale(self):
+        """ Looks at the DAYS_TO_STALE parameter, uses that to identify stale
+        records and then purges them from the database.
+        """
+        stale_keys = self.get_stale()
+        for stale_key in stale_keys:
+            LOGGER.debug(f"deleting records for {stale_key}")
+            self.clear_cache(idem_key=stale_key)
+
+
