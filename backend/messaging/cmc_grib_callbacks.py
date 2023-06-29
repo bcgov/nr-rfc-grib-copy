@@ -47,7 +47,7 @@ class CMC_Grib_Callback:
         msg_body = body.decode()
         msg_list = msg_body.split(' ')
         emitted_file_name = msg_list[2]
-        LOGGER.debug(f"message recieved: {msg_body}")
+        LOGGER.debug(f"message recieved: -{msg_body}-  delivery tag: {delivery_tag}")
 
         # because we are using the hpfx server, we are expecting the date to be
         # the first directory in the message (path)
@@ -62,14 +62,16 @@ class CMC_Grib_Callback:
         # is this an event we are interested in, working on the current date that
         # has been calculated in the message cache property 'current_idempotency_key'
         if self.mc.is_event_of_interest(msg=emitted_file_name, idem_key=date_str):
-            LOGGER.debug(f"caching message in db: {idem_key} {emitted_file_name}")
+            LOGGER.debug(f"caching message in db: {date_str} {emitted_file_name}")
             self.mc.cache_event(emitted_file_name, idem_key=date_str)
 
             # check to see if all the events are available.
             if self.mc.is_all_data_there(idem_key=date_str):
-                LOGGER.info(f"data complete for idem key: {self.mc.current_idempotency_key}")
+                LOGGER.info(f"data complete for idem key: {self.date_str}")
                 self.emit_event(idem_key=date_str)
-        LOGGER.debug("acknowledging message")
+        else:
+            LOGGER.debug(f"message not of interest: {emitted_file_name}, idem_key: {date_str}")
+        LOGGER.debug(f"acknowledging message: {delivery_tag}")
         if self.ack:
             channel.basic_ack(delivery_tag)
 

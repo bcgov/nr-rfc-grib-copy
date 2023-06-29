@@ -8,12 +8,24 @@ LOGGER = logging.getLogger(__name__)
 
 
 def test_get_all_messages(message_cache_instance_with_data):
+    """tests against a database that has records in it.. Verifies that the
+    get_cached_events will retrieve the cached events
+
+    :param message_cache_instance_with_data: _description_
+    :type message_cache_instance_with_data: _type_
+    """
     LOGGER.debug(f"message_cache_instance_with_data: {message_cache_instance_with_data}")
     mc = message_cache_instance_with_data
     events = mc.get_cached_events()
     assert len(events) == 2
 
 def test_cache_event(message_cache_instance):
+    """using a blank database verifies that records can be cached to the
+    database via the message cache method cache_event
+
+    :param message_cache_instance: message cache instance with empty database
+        behind it
+    """
     mc = message_cache_instance
     msg = 'msg 1 2 4'
     idem_key = 'test_idem_key'
@@ -35,6 +47,16 @@ def test_is_of_interest(message_cache_instance):
     expected_value = mc.expected_data[idem_key][3]
     LOGGER.debug(f"expected_value: {expected_value}")
     assert mc.is_event_of_interest(expected_value)
+
+    # /20230628/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/099/CMC_glb_PRATE_SFC_0_latlon.15x.15_2023062800_P099.grib2
+    message = '/20230628/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/099/CMC_glb_PRATE_SFC_0_latlon.15x.15_2023062800_P099.grib2'
+    idem_key = '20230628'
+    assert mc.is_event_of_interest(msg=message, idem_key=idem_key)
+
+    message = '/20230630/WXO-DD/model_gem_global/15km/grib2/lat_lon/00/099/CMC_glb_PRATE_SFC_0_latlon.15x.15_2023063000_P099.grib2'
+    idem_key = '20230630'
+    assert mc.is_event_of_interest(msg=message, idem_key=idem_key)
+
 
 def test_is_all_data_there(message_cache_instance):
     mc = message_cache_instance
@@ -146,7 +168,7 @@ def test_clear_cache(message_cache_instance_with_data):
     assert key1 in mc.cached_events
 
 
-def test_cache_event(message_cache_instance_with_data):
+def test_cache_event2(message_cache_instance_with_data):
     mc = message_cache_instance_with_data
     # add a stale event
     mc.cache_event('stale event', idem_key='20230419')
