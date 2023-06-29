@@ -46,8 +46,8 @@ class CMC_Grib_Callback:
 
         msg_body = body.decode()
         msg_list = msg_body.split(' ')
-        emitted_file_name = msg_list[2]
-        LOGGER.debug(f"message recieved: -{msg_body}-  delivery tag: {delivery_tag}")
+        emitted_file_name = msg_list[2].strip()
+        LOGGER.debug(f"message recieved: -{emitted_file_name}-  delivery tag: {delivery_tag}")
 
         # because we are using the hpfx server, we are expecting the date to be
         # the first directory in the message (path)
