@@ -62,7 +62,7 @@ class CMC_Grib_Callback:
         # is this an event we are interested in, working on the current date that
         # has been calculated in the message cache property 'current_idempotency_key'
         if self.mc.is_event_of_interest(emitted_file_name, idem_key=date_str):
-            self.debug(f"caching message in db: {idem_key} {emitted_file_name}")
+            LOGGER.debug(f"caching message in db: {idem_key} {emitted_file_name}")
             self.mc.cache_event(emitted_file_name, idem_key=date_str)
 
             # check to see if all the events are available.
