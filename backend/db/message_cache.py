@@ -146,15 +146,20 @@ class MessageCache:
         if idem_key is None:
             idem_key = self.current_idempotency_key
 
-        event_record = db.model.Events(event_message=msg, event_idempotency_key=idem_key)
+        # check if event has already been cached
+        if (idem_key not in self.cached_events) or msg not in self.cached_events[idem_key]:
 
-        with self.session_maker() as session:
-            session.add(event_record)
-            session.commit()
-            # add to in memory struct
-            if idem_key not in self.cached_events:
-                self.cached_events[idem_key] = []
-            self.cached_events[idem_key].append(msg)
+            event_record = db.model.Events(event_message=msg, event_idempotency_key=idem_key)
+
+            with self.session_maker() as session:
+                session.add(event_record)
+                session.commit()
+                # add to in memory struct
+                if idem_key not in self.cached_events:
+                    self.cached_events[idem_key] = []
+                self.cached_events[idem_key].append(msg)
+        else:
+            LOGGER.debug(f"event {msg} with idem key: {idem_key} already cached")
 
     def is_event_of_interest(self, msg, idem_key=None):
         """
