@@ -17,6 +17,7 @@ class CMC_Grib_Callback:
 
         # init db connection
         self.mc = db.message_cache.MessageCache()
+        self.mc.flush_stale()
 
         # whether to ack messages or not
         self.ack = util.config.MESSAGE_ACK
@@ -41,8 +42,7 @@ class CMC_Grib_Callback:
         #   0 - datetimestamp (i think!)
         #   1 - protocol / domain to server w/ data
         #   2 - directory path to the data that is now available
-        LOGGER.debug(f"param: {channel}")
-        LOGGER.debug(f"body: {body}")
+        LOGGER.debug(f"message channel: {channel}")
 
         msg_body = body.decode()
         msg_list = msg_body.split(' ')
@@ -57,11 +57,14 @@ class CMC_Grib_Callback:
         date_str = p.parts[1]
 
         # store event in cache - caching every event to help with debugging
-        self.mc.cache_event(emitted_file_name, idem_key=date_str)
+        # self.mc.cache_event(emitted_file_name, idem_key=date_str)
 
         # is this an event we are interested in, working on the current date that
         # has been calculated in the message cache property 'current_idempotency_key'
         if self.mc.is_event_of_interest(emitted_file_name, idem_key=date_str):
+            self.debug(f"caching message in db: {idem_key} {emitted_file_name}")
+            self.mc.cache_event(emitted_file_name, idem_key=date_str)
+
             # check to see if all the events are available.
             if self.mc.is_all_data_there(idem_key=date_str):
                 LOGGER.info(f"data complete for idem key: {self.mc.current_idempotency_key}")
@@ -70,9 +73,19 @@ class CMC_Grib_Callback:
         if self.ack:
             channel.basic_ack(delivery_tag)
 
+    def check_for_stale_events(self):
+        """check for stale events in the database, will check every 10 messages
+        recieved
+        """
+        if self.emit_cnt % 10 == 0:
+            if self.mc.has_stale():
+                self.mc.flush_stale()
+
     def emit_event(self, idem_key=None):
         """called when a new event is emitted
         """
+        self.check_for_stale_events()
+
         if idem_key is None:
             idem_key = self.mc.current_idempotency_key
         LOGGER.info(f"NEW EVENT EMITTING: {idem_key}")

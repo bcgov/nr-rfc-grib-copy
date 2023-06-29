@@ -8,8 +8,7 @@ import sys
 
 LOGGER = logging.getLogger(__name__)
 
-pytest_plugins = ["fixtures_db"]
+pytest_plugins = ["fixtures.fixtures_db",
+                  "fixtures.fixtures_api"]
 
 testSession = None
-
-

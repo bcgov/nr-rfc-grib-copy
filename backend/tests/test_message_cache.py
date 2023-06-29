@@ -69,7 +69,8 @@ def test_is_all_data_there_startup_emits_event(message_cache_instance_operation_
     # verifies that if the database has all the events it is expecting it will
     # proceed to with whatever action is configured.
     mc = message_cache_instance_operation_data
-    mc.check_for_unemitted_events()
+    data_there = mc.is_all_data_there()
+    LOGGER.debug(f"data is there? {data_there}")
     pass
 
 # args fixture_name, test params, indirect=True
@@ -143,5 +144,62 @@ def test_clear_cache(message_cache_instance_with_data):
     assert key2 not in mc.cached_events
     # make sure the key that wasn't cleared is still in memory
     assert key1 in mc.cached_events
+
+
+def test_cache_event(message_cache_instance_with_data):
+    mc = message_cache_instance_with_data
+    # add a stale event
+    mc.cache_event('stale event', idem_key='20230419')
+    # verify that there is a stale event
+    assert mc.has_stale()
+
+    # flush it
+    mc.flush_stale()
+
+    # assert that it isn't there anymore
+    assert not mc.has_stale()
+
+
+def test_get_events(message_cache_instance_operation_data):
+    # simple test to retrieve the events associated with one of the test
+    # databases
+    mc = message_cache_instance_operation_data
+    test_date_with_all_data = '20230608'
+    status = mc.is_all_data_there(idem_key=test_date_with_all_data)
+    LOGGER.debug(f"data with key: {test_date_with_all_data} is all there: {status}")
+    assert status
+
+    # now verify a date that doesn't have any data associated with it
+    test_date_with_missing_data = '20230607'
+    status = mc.is_all_data_there(idem_key=test_date_with_missing_data)
+    LOGGER.debug(f"data with key: {test_date_with_missing_data} is all there: {status}")
+    assert not status
+
+    # finally try with a date that only has some data
+    test_date_with_missing_data = '20230606'
+    status = mc.is_all_data_there(idem_key=test_date_with_missing_data)
+    LOGGER.debug(f"data with key: {test_date_with_missing_data} is all there: {status}")
+    assert not status
+
+# def test_is_event_of_interest(message_cache_instance_operation_data):
+#     pass
+
+
+@pytest.mark.parametrize("date_string, expcted_result", [
+    ('20230621', True),
+    ('20230622', False),
+    ('20230623', True),
+])
+def test_has_stale(
+    date_string,
+    expcted_result,
+    message_cache_instance_operation_data
+):
+    LOGGER.debug(f"date string: {date_string}")
+    LOGGER.debug(f"expected result: {expcted_result}")
+    mc = message_cache_instance_operation_data
+
+    result = mc.has_stale()
+    assert result is True
 
 
