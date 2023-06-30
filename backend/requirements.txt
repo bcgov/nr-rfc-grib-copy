@@ -2,6 +2,6 @@ pika==1.3.1
 sqlalchemy==2.0.9
 # evaluate if beautifulsoup4 is needed
 beautifulsoup4==4.12.2
-pytz==2022.7.1
+pytz==2023.3
 requests==2.31.0
 FastAPI[all]==0.95.2
