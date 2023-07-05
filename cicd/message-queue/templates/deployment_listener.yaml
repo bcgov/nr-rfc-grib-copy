@@ -22,9 +22,9 @@ spec:
       # imagePullSecrets:
       #   - name: deployer-token-klpcz
       volumes:
-        - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+        - name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
           persistentVolumeClaim:
-            claimName: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+            claimName: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
       containers:
         - name: {{ .Values.app.name }}
           image: >-
@@ -56,38 +56,38 @@ spec:
             - name: AMPQ_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+                  name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
                   key: ampq_username
             - name: AMPQ_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name:  {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+                  name:  {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
                   key: ampq_password
             - name: AMPQ_DOMAIN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+                  name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
                   key: ampq_server
             - name: GH_ORG
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
                   key: gh-org
             - name: GH_REPO
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
                   key: gh-repo
             - name: GH_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
+                  name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}-{{ .Values.github_secrets.name }}
                   key: gh-access-token
             - name: ZONE
               value: {{ .Values.app.zone }}
 
           volumeMounts:
-            - name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+            - name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
               mountPath: {{ .Values.app.pvc_mount_point }}
           resources:
             limits:
