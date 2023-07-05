@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-same-namespace
+  name: allow-same-namespace-{{ .Values.app.name }}-{{ .Values.app.zone }}
   labels:
     template: quickstart-network-security-policy
     app: {{ .Values.app.name }}-{{ .Values.app.zone }}
