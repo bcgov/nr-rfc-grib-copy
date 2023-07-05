@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: {{ .Values.app.name }}-{{ .Values.app.name }}-{{ .Values.app.component }}
+  name: {{ .Values.app.name }}-{{ .Values.app.zone }}-{{ .Values.app.component }}
   labels:
     app: {{ .Values.app.name }}-{{ .Values.app.zone }}
 spec:
