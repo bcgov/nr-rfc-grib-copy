@@ -31,9 +31,9 @@ CLOUDAMQP_URL = "CLOUDAMQP_URL"
 MESSAGE_ACK = os.getenv("MESSAGE_ACK", "1")
 MESSAGE_ACK = bool(int(MESSAGE_ACK))
 
-GH_ORG = os.getenv("GH_ORG")
-GH_REPO = os.getenv("GH_REPO")
-GH_TOKEN = os.getenv("GH_TOKEN")
+GH_ORG = os.getenv("GH_ORG").strip()
+GH_REPO = os.getenv("GH_REPO").strip()
+GH_TOKEN = os.getenv("GH_TOKEN").strip()
 required_params = [GH_ORG, GH_REPO, GH_TOKEN]
 for param in required_params:
     if param is None:

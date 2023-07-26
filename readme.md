@@ -1,12 +1,13 @@
 # Overview
 
-Reworking of an existing process.  Existing process is deployed on prem using
-bat files / wget / windows scheduler to download CMC data.  Problems with the
+Re-worked an existing process that previously ran on prem via windows scheduler
+using a wget command to retrieve the original data.  Problems with the
 current process include:
 
 * is configured to run on prem and is not scaleable
 * takes a while to download and process all the data
 * schedule does not always align with the availability of data
+* is not robust, fails if a network hickup occurs.
 
 This repo represents the evolution of this process, and will eventually be used
 to create an event driven data pipeline that will be triggered by the federal
@@ -15,6 +16,9 @@ governments Advanced Message Queue Protocol (AMQP).  The pipeline will then:
 1. download the grib2 files
 1. process the grib2 files
 1. prepare the grib2 data for input into the CLEVER model.
+
+The new process will monitor for a 200 status code.  If it doesn't recieve the 200
+status code response then the downloader will pause and retry until it succeeds.
 
 # Components of the Repository:
 
@@ -33,8 +37,13 @@ which will:
 
 ## message queue subscriber
 
-The message queue code is in the `backend` folder.  To init the backend for
-development:
+The message queue code is in the `backend` folder.  The subscriber creates a long
+running process that will monitor the event queue for specific events that identify
+that the expected data for the CMC pipeline is ready for download.  When the data
+becomes available, it will trigger a downstream proces.  In this case a github
+action via the remote_workflow rest call.
+
+To init the backend for development purposes:
 
 ``` bash
 # create the virtual environment if not created already
@@ -62,7 +71,7 @@ uvicorn main:app --port=8000 --host=0.0.0.0 --reload
 
 ## Testing containerization
 
-Create the image:
+Build/Create the image:
 
 `docker build -t listener:listener .`
 
@@ -72,9 +81,9 @@ Run the image
 
 Once the image is running check the healthz end point
 
-# Remote job trigger
+# Testing Remote job trigger / Manual Trigger
 
-the following is an example of calling a github action that has a remote_workflow
+The following is an example of calling a github action that has a remote_workflow
 execution type defined for it:
 
 curl -H "Accept: application/vnd.github.everest-preview+json" \
@@ -110,3 +119,6 @@ Doing Something...
 Incomming message: mymessage
 ```
 
+# Cycle the token
+
+[See this doc](docs/Cycle_remote_token.md)
