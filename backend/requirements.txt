@@ -4,4 +4,4 @@ sqlalchemy==2.0.17
 beautifulsoup4==4.12.2
 pytz==2023.3
 requests==2.31.0
-FastAPI[all]==0.99.1
+FastAPI[all]==0.101.1
