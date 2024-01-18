@@ -17,8 +17,8 @@ LOGGER = logging.getLogger(__name__)
 
 dest_folder_gribs = os.path.join('cmc_data', 'gribs')
 ostore_folder_gribs = os.path.join('cmc', 'gribs')
-dest_folder_summary = os.path.join('cmc_data', 'summary')
-ostore_folder_summary = os.path.join('cmc', 'summary')
+dest_folder_summary = os.path.join('cmc_data', 'summary_V2024')
+ostore_folder_summary = os.path.join('cmc', 'summary_V2024')
 
 # TZ = 'America/Toronto'
 TZ = pytz.timezone('America/Vancouver')
