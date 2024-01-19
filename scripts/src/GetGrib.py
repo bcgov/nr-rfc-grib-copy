@@ -266,7 +266,7 @@ class CoalateGribOutput:
             os.makedirs(output_directory)
 
         for key in self.grib_outputs:
-            outfile = os.path.join(output_directory, f'{key}.txt')
+            outfile = os.path.join(output_directory, f'{key}_V2024.txt')
             with open(outfile, 'w') as fh:
                 fh.write(self.grib_outputs[key])
 
