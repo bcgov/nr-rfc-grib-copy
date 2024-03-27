@@ -18,7 +18,7 @@ jobs:
       run:
         shell: bash
     name: 'Download and Process CMC Grib2 Files'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     environment: RUN
     env:
       OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
