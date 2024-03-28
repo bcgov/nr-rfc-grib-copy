@@ -75,7 +75,7 @@ jobs:
         echo "COMMIT_SHA=$sha" >> $GITHUB_ENV
 
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       id: checkout
       with:
         ref: ${{ env.COMMIT_SHA }}
