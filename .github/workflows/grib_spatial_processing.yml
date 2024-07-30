@@ -1,0 +1,56 @@
+name: Download and Process CMC Grib2 Files
+
+on:
+  push:
+    branches:
+      - "main"
+  # cron schedules are in UTC
+  # this job should run at 7 am pst, which translates to 2 pm.
+  schedule:
+    - cron: '00 14 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: run-cmc-grib-download
+
+jobs:
+  dl_cansip_grib2:
+    defaults:
+      run:
+        shell: bash
+    name: 'Spatial Processing of Grib Files'
+    runs-on: ubuntu-22.04
+    environment: RUN
+    env:
+      OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
+      OBJ_STORE_SECRET: ${{ secrets.OBJ_STORE_SECRET }}
+      OBJ_STORE_USER: ${{ secrets.OBJ_STORE_USER }}
+      OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
+
+    steps:
+    - uses: actions/checkout@v3
+      id: checkout
+      with:
+       fetch-depth: 0
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - id: install_dependencies
+      name: install python dependencies
+      shell: bash
+      run: |
+        pip install --upgrade pip
+        pip install -r scripts/src/spatial-requirements.txt
+
+    - id: grib_spatial_summary
+      name: produce spatial summary of gribs
+      shell: bash
+      run: |
+        python scripts/src/grib2poly.py
+
+    # - id: debug
+    #   name: debug and list files
+    #   shell: bash
+    #   run: |
+    #     ls -la
