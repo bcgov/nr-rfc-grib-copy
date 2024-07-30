@@ -137,7 +137,7 @@ hr_index = pd.date_range(start=current_date,end=end_date,freq='h')
 
 #CLEVER Zonal Precip:
 clever_shp_path = 'raw_data/shape/CLEVER/CLEVER_BASINS.shp'
-clever_shp = geopandas.read_file(shp_path)
+clever_shp = geopandas.read_file(clever_shp_path)
 output_template = pd.DataFrame(data=None, index = hr_index, columns = clever_shp.WSDG_ID)
 CLEVER_precip = watershed_forecast_averaging(file_list, clever_shp, output_template)
 df_to_objstore(CLEVER_precip,CLEVER_obj_path)
