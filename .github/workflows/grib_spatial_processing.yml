@@ -1,4 +1,4 @@
-name: Download and Process CMC Grib2 Files
+name: Spatial Processing of Grib Files
 
 on:
   push:
