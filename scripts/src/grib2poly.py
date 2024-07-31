@@ -192,9 +192,9 @@ for dt in importdates:
     ostore.get_object(local_path=local_filename, file_path=obj_path)
     file_list.append(local_filename)
 
-output_template = pd.DataFrame(data=None, index = importdates, columns = coffee_shp.WSDG_ID)
+output_template = pd.DataFrame(data=None, index = importdates - datetime.timedelta(days=1), columns = coffee_shp.WSDG_ID)
 COFFEE_precip = watershed_forecast_averaging(file_list, coffee_shp, output_template, type = 'analysis')
-output_template = pd.DataFrame(data=None, index = importdates, columns = clever_shp.WSDG_ID)
+output_template = pd.DataFrame(data=None, index = importdates - datetime.timedelta(days=1), columns = clever_shp.WSDG_ID)
 CLEVER_precip = watershed_forecast_averaging(file_list, clever_shp, output_template, type = 'analysis')
 
 COFFEE_summary = update_data(COFFEE_summary, COFFEE_precip)
