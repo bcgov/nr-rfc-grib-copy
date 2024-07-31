@@ -3,5 +3,5 @@ sqlalchemy==2.0.17
 # evaluate if beautifulsoup4 is needed
 beautifulsoup4==4.12.2
 pytz==2023.3
-requests==2.31.0
+requests==2.32.2
 FastAPI[all]==0.99.1
