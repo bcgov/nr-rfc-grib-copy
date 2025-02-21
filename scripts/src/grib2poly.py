@@ -159,9 +159,10 @@ importdates = pd.date_range(start = current_date-datetime.timedelta(days=1), end
 
 RDPA_objfolder = os.path.join('RFC_DATA','RDPA')
 ostore_objs = ostore.list_objects(RDPA_objfolder,return_file_names_only=True)
+url_template = 'https://hpfx.collab.science.gc.ca/{dt_text}/WXO-DD/model_rdpa/10km/06/{dt_text}T06Z_MSC_RDPA_APCP-Accum24h_Sfc_RLatLon0.09_PT0H.grib2'
 for dt in importdates:
     dt_text = dt.strftime('%Y%m%d')
-    url = f'https://hpfx.collab.science.gc.ca/{dt_text}/WXO-DD/model_rdpa/10km/06/{dt_text}T06Z_MSC_RDPA_APCP-Accum24h_Sfc_RLatLon0.09_PT0H.grib2'
+    url = url_template.format(dt_text=dt_text)
     filename = url.split('/')[-1]
     local_filename = os.path.join('raw_data',filename)
     obj_path = os.path.join(RDPA_objfolder,filename)
@@ -185,7 +186,7 @@ CLEVER_summary = get_summary(CLEVER_summary_fpath, year)
 file_list = list()
 for dt in importdates:
     dt_text = dt.strftime('%Y%m%d')
-    url = f'https://hpfx.collab.science.gc.ca/{dt_text}/WXO-DD/model_rdpa/10km/06/{dt_text}T06Z_MSC_RDPA_APCP-Accum24h_Sfc_RLatLon0.09_PT0H.grib2'
+    url = url_template.format(dt_text=dt_text)
     filename = url.split('/')[-1]
     obj_path = os.path.join('RFC_DATA','RDPA',filename)
     local_filename = os.path.join('raw_data',filename)
