@@ -1,0 +1,50 @@
+name: ECMWF IFS Grib Download
+
+on:
+  push:
+    branches:
+      - "main"
+  # cron schedules are in UTC
+  # this job should run at 9 am pst, which translates to 5 pm.
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: run-ecmwf-grib-download
+
+jobs:
+  dl_ecmwf_grib2:
+    defaults:
+      run:
+        shell: bash
+    name: 'Download ECMWF grib files'
+    runs-on: ubuntu-22.04
+    environment: RUN
+    env:
+      OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
+      OBJ_STORE_SECRET: ${{ secrets.OBJ_STORE_SECRET }}
+      OBJ_STORE_USER: ${{ secrets.OBJ_STORE_USER }}
+      OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
+
+    steps:
+    - uses: actions/checkout@v3
+      id: checkout
+      with:
+       fetch-depth: 0
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - id: install_dependencies
+      name: install python dependencies
+      shell: bash
+      run: |
+        pip install --upgrade pip
+        pip install -r scripts/src/ecmwf-requirements.txt
+
+    - id: ecmwf_grib_dowload
+      name: Download ECMWF Grib Files
+      shell: bash
+      run: |
+        python scripts/src/ecmwf_main.py
