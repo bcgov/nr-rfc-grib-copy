@@ -1,6 +1,4 @@
 import datetime
-import logging
-import logging.config
 import os
 import sys
 from ecmwf.opendata import Client
