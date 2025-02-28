@@ -108,23 +108,23 @@ def get_extract_gribs(date_str:str, GribConfigList:list, grib_folder:str, summar
 def persist_gribs_to_object_store(date_str, grib_folder, summary_folder, ostore_grib_folder=None, ostore_summary_folder=None):
     dest_folder_gribs = grib_folder
     if ostore_grib_folder is None:
-        ostore_folder_gribs = grib_folder
+        ostore_grib_folder = grib_folder
     dest_folder_summary = summary_folder
     if ostore_summary_folder is None:
-        ostore_folder_summary = summary_folder
+        ostore_summary_folder = summary_folder
     # finally copy gribs from local storage to object storage
     copy_2_ostore = GetGrib.CopyCMC2ObjectStorage(date_str)
     if date_str is None: date_str = datetime.datetime.now(TZ).strftime('%Y%m%d')
     src_folder = os.path.join(dest_folder_gribs, date_str)
     LOGGER.debug("src_folder: %s", src_folder)
-    ostore_folder = os.path.join(ostore_folder_gribs, date_str)
+    ostore_folder = os.path.join(ostore_grib_folder, date_str)
     copy_2_ostore.copy_to_ostore(
         src_folder=src_folder,
         ostore_folder=ostore_folder)
 
     # and lastly copy the summaries to the object storage
     src_folder = os.path.join(dest_folder_summary, date_str)
-    ostore_folder = os.path.join(ostore_folder_summary, date_str)
+    ostore_folder = os.path.join(ostore_summary_folder, date_str)
     copy_2_ostore.copy_to_ostore(
         src_folder=src_folder,
         ostore_folder=ostore_folder)
