@@ -263,6 +263,83 @@ class GribGlobal_2(GribConfig):
     timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
     extract_code = "T"
 
+class GribECMWF1(GribConfig):
+
+    model_number = "00"
+    iteratorlist = list(range(0,147,3))
+    iteratorlist.extend(list(range(144,246,6))) # these are added on and used in model for bias correction
+    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = 'ECMWFifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
+    url_template = (
+        "ecmwf"
+    )
+    model_name = "ifs"
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
+    extract_code = "T"
+    var = "2t"
+
+class GribECMWF2(GribConfig):
+
+    model_number = "00"
+    iteratorlist = list(range(0,147,3))
+    iteratorlist.extend(list(range(144,246,6))) # these are added on and used in model for bias correction
+    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = 'ECMWFifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
+    url_template = (
+        "ecmwf"
+    )
+    model_name = "ifs"
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
+    extract_code = "P"
+    var = "tp"
+
+class GribECMWF3(GribConfig):
+
+    model_number = "00"
+    iteratorlist = list(range(0,246,6))
+    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = 'ECMWFaifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
+    url_template = (
+        "ecmwf"
+    )
+    model_name = "aifs-single"
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
+    extract_code = "T"
+    var = "2t"
+
+class GribECMWF4(GribConfig):
+
+    model_number = "00"
+    iteratorlist = list(range(0,246,6))
+    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = 'ECMWFaifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
+    url_template = (
+        "ecmwf"
+    )
+    model_name = "aifs-single"
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
+    extract_code = "P"
+    var = "tp"
 
 class GribConfigCollection:
     def __init__(self, date_str=None):
@@ -309,7 +386,8 @@ extractParams = WGribExtractParams()
 if __name__ == "__main__":
     # testing the abc to confirm class variables required
 
-    gribtest = GribRegional_1()
+    #gribtest = GribRegional_1()
+    gribtest = GribECMWF()
     gribtest2 = GribRegional_2()
     gribtest3 = GribGlobal_1()
     gribtest4 = GribGlobal_2()

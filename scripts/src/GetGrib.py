@@ -11,6 +11,7 @@ import config
 import GetGribConfig
 import ObjectStore
 import requests
+from ecmwf.opendata import Client
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +47,14 @@ class GetGrib:
 
     def get(self):
         get_arg_list = []
-
+        if self.config.url_template=="ecmwf":
+            client = Client(
+                source="ecmwf",
+                model=self.config.model_name,
+                resol="0p25",
+                preserve_request_order=False,
+                infer_stream_keyword=True,
+                )
         for iterval in self.config.get_iterator():
             url_dest_dict = {}
             LOGGER.debug(f"iterval: {iterval}")
@@ -56,13 +64,22 @@ class GetGrib:
             full_url = os.path.join(url, src_file)
             dest_file = os.path.join(self.dest_folder, src_file)
             LOGGER.info(f"url to aquire file from: {full_url}")
+            if self.config.url_template=="ecmwf":
+                client.retrieve(
+                    date=self.date_str,
+                    time=self.config.model_number,
+                    step=int(iterval),
+                    type="fc",
+                    param=self.config.var,
+                    target=dest_file,)
             if not os.path.exists(dest_file):
                 url_dest_dict['url'] = full_url
                 url_dest_dict['dest_file'] = dest_file
                 get_arg_list.append(url_dest_dict)
 
-        with multiprocessing.Pool(4) as p:
-            p.map(self._get, get_arg_list)
+        if not self.config.url_template=="ecmwf":
+            with multiprocessing.Pool(4) as p:
+                p.map(self._get, get_arg_list)
 
     def _get(self, url_destfile_dict):
         LOGGER.debug("starting task ...")
@@ -185,18 +202,19 @@ class GetGrib:
         output = stdout.decode("utf-8")
         return output
 
-    def get_url(self, iterator=None):
+    def get_url(self, iterator=None, url_template = None):
         """templates can use any property that is populated in the class
         This method looks at what properties are required, and uses them
         to create the url string using the url format string.
         """
         LOGGER.debug(f"iterator: {iterator}")
-
-        fstring_properties = self.get_property_in_fstring(self.config.url_template)
+        if url_template is None:
+            url_template = self.config.url_template
+        fstring_properties = self.get_property_in_fstring(url_template)
         LOGGER.debug(f"fstring_properties: {fstring_properties}")
         if iterator and 'iterator' in self.config.file_template:
             fstring_properties['iterator'] = iterator
-        url = self.config.url_template.format(**fstring_properties)
+        url = url_template.format(**fstring_properties)
         LOGGER.debug(f'url: {url}')
         return url
 
@@ -305,7 +323,9 @@ class CopyCMC2ObjectStorage:
 
 if __name__ == '__main__':
     dest_folder = 'tmp'
-    reg1_config = GetGribConfig.GribRegional_1()
+    #reg1_config = GetGribConfig.GribRegional_1()
+    #reg1_get = GetGrib(dest_folder, reg1_config)
+    #reg1_get.get()
+    reg1_config = GetGribConfig.GribECMWF1()
     reg1_get = GetGrib(dest_folder, reg1_config)
     reg1_get.get()
-
