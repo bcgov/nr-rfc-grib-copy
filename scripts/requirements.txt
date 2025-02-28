@@ -3,3 +3,4 @@ boto3==1.27.0
 pytz==2023.3
 minio==7.1.15
 beautifulsoup4==4.12.2
+ecmwf-opendata==0.3.14
