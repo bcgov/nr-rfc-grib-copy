@@ -171,9 +171,12 @@ var = "TX"
 TX_bias = compute_mean_bias(forecast_data,All_obs,'TX',range(0,3),range(1,4))
 #Current day Tmin bias gets4x weight in bias calculation
 TN_bias = compute_mean_bias(forecast_data,All_obs,'TN',range(0,4),range(0,3))
-#forecast_TX_corr = forecast_TX.loc[date].add(mean_bias_TX)
+forecast_corr = forecast_data.loc[date,:].copy()
+forecast_corr.loc["TX",:] = pd.concat({"TX": forecast_corr.loc["TX",:].add(TX_bias).round(1)})
+forecast_corr.loc["TN",:] = pd.concat({"TN": forecast_corr.loc["TN",:].add(TN_bias).round(1)})
 
 #Obs has datetime index, forecast has regular index, causing issues?
+forecast_data.loc[(date,"TX"),:]
 test_TX = forecast_TX.loc[slice(datelist[0]),:]
 test_TX = test_TX.droplevel(0)
 
