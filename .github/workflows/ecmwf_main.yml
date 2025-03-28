@@ -18,7 +18,7 @@ jobs:
       run:
         shell: bash
     name: 'Download ECMWF grib files'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: RUN
     env:
       OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
@@ -27,7 +27,7 @@ jobs:
       OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       id: checkout
       with:
        fetch-depth: 0
