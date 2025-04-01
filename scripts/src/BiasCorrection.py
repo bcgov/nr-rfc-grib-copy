@@ -89,10 +89,14 @@ def read_forecast(date, config_list, grib_path):
 
     match extract_code:
         case "P":
-            #precip units are kg/(m^2 s) = mm/s. Multiple by 3600s/hr * hrs to get mm
-            dt = (combined_data.index.diff().seconds).to_list()
-            dt[0] = dt[1]
-            combined_data = combined_data.mul(dt, axis='index')
+            if config_list_P[0].model_name == 'ifs':
+                combined_data.iloc[1:,:] = combined_data.diff().mul(1000).iloc[1:,:]
+                combined_data = combined_data.where(combined_data < 0, 0)
+            else:
+                #precip units are kg/(m^2 s) = mm/s. Multiple by 3600s/hr * hrs to get mm
+                dt = (combined_data.index.diff().seconds).to_list()
+                dt[0] = dt[1]
+                combined_data = combined_data.mul(dt, axis='index')
         case "T":
             #Convert Kelvin to Celsius:
             combined_data = combined_data.add(-273.15, axis='index')
@@ -134,14 +138,21 @@ del OBS[:]
 
 date = datetime.datetime.now()
 
-grib_path = "cmc/summary_V2024"
-daily_summary_path = 'ClimateFOR/cmc/daily_forecast_summary/'
+#grib_path = "cmc/summary_V2024"
+#daily_summary_path = 'ClimateFOR/cmc/daily_forecast_summary/'
+grib_path = "ecmwf/ifs00Z_summary"
+daily_summary_path = 'ClimateFOR/ecmwf_ifs00Z/daily_forecast_summary/'
+daily_corrected_path = 'ClimateFOR/ecmwf_ifs00Z/daily_corrected_summary/'
+config_list_P = [GetGribConfig.GribECMWF2()]
+config_list_T = [GetGribConfig.GribECMWF1()]
+
 obj_summary_list = ostore.list_objects(daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-#days_back = min(abs((max(summary_dates) - date).days),6)
-days_back = 10
-config_list_P = [GetGribConfig.GribRegional_1(),GetGribConfig.GribGlobal_1()]
-config_list_T = [GetGribConfig.GribRegional_2(),GetGribConfig.GribGlobal_2()]
+if len(summary_dates)>0:
+    days_back = min(abs((max(summary_dates) - date).days),6)
+else:
+    days_back = 6
+
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 for dt in datelist:
     for_PC = read_forecast(date=dt,config_list=config_list_P,grib_path=grib_path)
@@ -155,6 +166,8 @@ for dt in datelist:
     for_TA.index = for_TA.index + pd.Timedelta('2h')
     TN_daily = for_TA.between_time('00:00','9:00').groupby(pd.Grouper(axis=0, freq = 'D')).min()
     All_daily = pd.concat([TX_daily,TN_daily,PC_daily],keys = ['TX','TN','PC'])
+    day = dt.replace(hour=0,minute=0,second=0,microsecond=0)
+    All_daily.loc[All_daily.index.get_level_values(1)>=day,:]
     daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
     df_to_objstore(All_daily,daily_summary_fpath)
 
@@ -175,6 +188,8 @@ forecast_corr = forecast_data.loc[date,:].copy()
 forecast_corr.loc["TX",:] = pd.concat({"TX": forecast_corr.loc["TX",:].add(TX_bias).round(1)})
 forecast_corr.loc["TN",:] = pd.concat({"TN": forecast_corr.loc["TN",:].add(TN_bias).round(1)})
 
+daily_corrected_fpath = os.path.join(daily_corrected_path,date.strftime("%Y%m%d.csv"))
+df_to_objstore(forecast_corr,daily_corrected_fpath)
 #Obs has datetime index, forecast has regular index, causing issues?
 forecast_data.loc[(date,"TX"),:]
 test_TX = forecast_TX.loc[slice(datelist[0]),:]
