@@ -91,7 +91,7 @@ def read_forecast(date, config_list, grib_path):
         case "P":
             if config_list_P[0].model_name == 'ifs':
                 combined_data.iloc[1:,:] = combined_data.diff().mul(1000).iloc[1:,:]
-                combined_data = combined_data.where(combined_data < 0, 0)
+                combined_data = combined_data.where(combined_data >= 0, 0)
             else:
                 #precip units are kg/(m^2 s) = mm/s. Multiple by 3600s/hr * hrs to get mm
                 dt = (combined_data.index.diff().seconds).to_list()
@@ -167,7 +167,8 @@ for dt in datelist:
     TN_daily = for_TA.between_time('00:00','9:00').groupby(pd.Grouper(axis=0, freq = 'D')).min()
     All_daily = pd.concat([TX_daily,TN_daily,PC_daily],keys = ['TX','TN','PC'])
     day = dt.replace(hour=0,minute=0,second=0,microsecond=0)
-    All_daily.loc[All_daily.index.get_level_values(1)>=day,:]
+    All_daily = All_daily.loc[All_daily.index.get_level_values(1)>=day,:].round(2)
+    All_daily.index = All_daily.index.set_names(['Variable','Date'])
     daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
     df_to_objstore(All_daily,daily_summary_fpath)
 
@@ -185,15 +186,18 @@ TX_bias = compute_mean_bias(forecast_data,All_obs,'TX',range(0,3),range(1,4))
 #Current day Tmin bias gets4x weight in bias calculation
 TN_bias = compute_mean_bias(forecast_data,All_obs,'TN',range(0,4),range(0,3))
 forecast_corr = forecast_data.loc[date,:].copy()
-forecast_corr.loc["TX",:] = pd.concat({"TX": forecast_corr.loc["TX",:].add(TX_bias).round(1)})
-forecast_corr.loc["TN",:] = pd.concat({"TN": forecast_corr.loc["TN",:].add(TN_bias).round(1)})
+forecast_corr.loc["TX",:] = pd.concat({"TX": forecast_corr.loc["TX",:].add(TX_bias)})
+#Set current day observed minimum temperature to observed values:
+forecast_corr.loc[("TN",date.strftime('%Y-%m-%d'))] = All_obs.loc[("TN",date)]
+forecast_corr.loc["TN",:] = pd.concat({"TN": forecast_corr.loc["TN",:].add(TN_bias)})
+#Round corrected daily forecast data to one decimal place:
+forecast_corr = forecast_corr.round(1)
+forecast_corr.index = forecast_corr.index.set_names(['Variable','Date'])
 
 daily_corrected_fpath = os.path.join(daily_corrected_path,date.strftime("%Y%m%d.csv"))
 df_to_objstore(forecast_corr,daily_corrected_fpath)
 #Obs has datetime index, forecast has regular index, causing issues?
-forecast_data.loc[(date,"TX"),:]
-test_TX = forecast_TX.loc[slice(datelist[0]),:]
-test_TX = test_TX.droplevel(0)
+
 
 #Save daily forecast summaries as csv files
 #Check dates with grib files available vs csv summaries. Produce csv summaries for for all dates with data available
