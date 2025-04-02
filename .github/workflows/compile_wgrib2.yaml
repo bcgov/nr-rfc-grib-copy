@@ -14,7 +14,7 @@ jobs:
       run:
         shell: bash
     name: 'Compile wgrib2 binary for ubuntu'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: RUN
     env:
       OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
@@ -22,7 +22,7 @@ jobs:
       FC: gfortran
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       id: checkout
       with:
        fetch-depth: 0
