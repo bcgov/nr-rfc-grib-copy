@@ -112,7 +112,7 @@ def compute_mean_bias(forecast_data, obs_data, var, forecast_days, days_back):
     bias = obs.sub(forecast,level=2)
     bias = bias.dropna(how='all')
     bias_index = bias.index.to_frame()
-    bias_index['ForecastDay'] = (bias_index.loc[:,2]-bias_index.loc[:,0]).dt.days
+    bias_index['ForecastDay'] = (bias_index.iloc[:,2]-bias_index.iloc[:,0]).dt.days
     bias_index['N'] = (date - bias_index.loc[:,0]).dt.days - bias_index['ForecastDay']
     ind = (bias_index['ForecastDay'].isin(forecast_days)) & (bias_index['N'].isin(days_back))
     mean_bias = bias.loc[ind,:].mean()
