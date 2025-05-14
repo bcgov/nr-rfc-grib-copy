@@ -7,7 +7,7 @@ on:
   # cron schedules are in UTC
   # this job should run at 9 am pst, which translates to 5 pm.
   schedule:
-    - cron: '30 16 * * *'
+    - cron: '15 16 * * *'
   workflow_dispatch:
   repository_dispatch:
     types: run-bias-correction
