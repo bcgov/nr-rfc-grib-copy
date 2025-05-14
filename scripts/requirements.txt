@@ -1,4 +1,4 @@
-requests==2.31.0
+requests==2.32.2
 boto3==1.27.0
 pytz==2023.3
 minio==7.1.15
