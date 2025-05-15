@@ -18,7 +18,7 @@ jobs:
       run:
         shell: bash
     name: 'Download and Process CMC Grib2 Files'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: RUN
     env:
       OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
@@ -28,12 +28,12 @@ jobs:
       WGRIB_UTILITY: /usr/local/bin/wgrib2
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       id: checkout
       with:
        fetch-depth: 0
 
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
       with:
         python-version: '3.11'
 

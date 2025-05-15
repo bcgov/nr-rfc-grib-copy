@@ -20,7 +20,7 @@ jobs:
   # Clean up OpenShift when PR closed, no conditions
   cleanup-openshift:
     name: Cleanup OpenShift
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: dev
 
     steps:
@@ -53,7 +53,7 @@ jobs:
     name: Image Promotions
     # TODO: uncomment once working
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: prod
     permissions:
       packages: write
@@ -75,7 +75,7 @@ jobs:
         echo "COMMIT_SHA=$sha" >> $GITHUB_ENV
 
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       id: checkout
       with:
         ref: ${{ env.COMMIT_SHA }}
