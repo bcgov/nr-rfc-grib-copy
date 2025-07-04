@@ -54,7 +54,7 @@ def split_duplicates(input):
     return output1
 
 #Regional forecasts getting overwritten by global data intended for Tmin correction?
-def read_forecast(date, config_list, grib_path):
+def read_forecast(date, config_list, grib_path, col_names, model_name):
     date = date.replace(hour=0,minute=0,second=0,microsecond=0)
     #Listof grib configs used to download data:
     #Create datetime index (UTC) of datetimes for the forecast data:
@@ -85,12 +85,15 @@ def read_forecast(date, config_list, grib_path):
 
     combined_data.index = dt_ind
     combined_data.index = combined_data.index - datetime.timedelta(hours=8)
-    combined_data.columns = All_obs.columns
+    combined_data.columns = col_names
 
     match extract_code:
         case "P":
-            if config_list_P[0].model_name == 'ifs':
+            if model_name == 'ifs':
                 combined_data.iloc[1:,:] = combined_data.diff().mul(1000).iloc[1:,:]
+                combined_data = combined_data.where(combined_data >= 0, 0)
+            elif model_name == 'aifs-single':
+                combined_data.iloc[1:,:] = combined_data.diff().iloc[1:,:]
                 combined_data = combined_data.where(combined_data >= 0, 0)
             else:
                 #precip units are kg/(m^2 s) = mm/s. Multiple by 3600s/hr * hrs to get mm
@@ -119,6 +122,53 @@ def compute_mean_bias(forecast_data, obs_data, var, forecast_days, days_back):
 
     return mean_bias
 
+def forecast_daily_summary(grib_path, datelist, config_list_T, config_list_P, daily_summary_path, col_names):
+    model_name = config_list_P[0].model_name
+    for dt in datelist:
+        for_PC = read_forecast(date=dt,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
+        for_TA = read_forecast(date=dt,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
+        for_TA = split_duplicates(for_TA)
+        #Precipitation computed 1am-1am in Excel, midnight to midnight here:
+        PC_daily = for_PC.groupby(pd.Grouper(axis=0, freq = 'D')).sum()
+        TX_daily = for_TA.groupby(pd.Grouper(axis=0, freq = 'D')).max()
+        #TMin computed between 10 am previous day and 7 am.
+        #Shift datetime index by 2 hours and compute Tmin between 00:00 and 09:00, equivalent to 10pm - 7am for the unshifted index:
+        for_TA.index = for_TA.index + pd.Timedelta('2h')
+        TN_daily = for_TA.between_time('00:00','9:00').groupby(pd.Grouper(axis=0, freq = 'D')).min()
+        All_daily = pd.concat([TX_daily,TN_daily,PC_daily],keys = ['TX','TN','PC'])
+        day = dt.replace(hour=0,minute=0,second=0,microsecond=0)
+        All_daily = All_daily.loc[All_daily.index.get_level_values(1)>=day,:].round(2)
+        All_daily.index = All_daily.index.set_names(['Variable','Date'])
+        daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
+        df_to_objstore(All_daily,daily_summary_fpath)
+
+def bias_correction(date, observed_data, daily_summary_path, daily_corrected_path):
+    forecast_list = list()
+    date = date.replace(hour=0,minute=0,second=0,microsecond=0)
+    datelist = pd.date_range(end=date, periods=6)
+    for dt in datelist:
+        daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
+        forecast_list.append(objstore_to_df(daily_summary_fpath, index_col=[0,1]))
+    forecast_data = pd.concat(forecast_list,keys = datelist)
+    del forecast_list[:]
+
+    var = "TX"
+    TX_bias = compute_mean_bias(forecast_data,observed_data,'TX',range(0,3),range(1,4))
+    #Current day Tmin bias gets4x weight in bias calculation
+    TN_bias = compute_mean_bias(forecast_data,observed_data,'TN',range(0,4),range(0,3))
+    forecast_corr = forecast_data.loc[date,:].copy()
+    forecast_corr.loc["TX",:] = pd.concat({"TX": forecast_corr.loc["TX",:].add(TX_bias)})
+    #Set current day observed minimum temperature to observed values:
+    forecast_corr.loc[("TN",date.strftime('%Y-%m-%d'))] = observed_data.loc[("TN",date)]
+    forecast_corr.loc["TN",:] = pd.concat({"TN": forecast_corr.loc["TN",:].add(TN_bias)})
+    #Round corrected daily forecast data to one decimal place:
+    forecast_corr = forecast_corr.round(1)
+    forecast_corr.index = forecast_corr.index.set_names(['Variable','Date'])
+
+    daily_corrected_fpath = os.path.join(daily_corrected_path,date.strftime("%Y%m%d.csv"))
+    df_to_objstore(forecast_corr,daily_corrected_fpath)
+    #Obs has datetime index, forecast has regular index, causing issues?
+
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
 
@@ -133,20 +183,21 @@ var_list = ["TX","TN","PP"]
 #Loop through each variable:
 for var in var_list:
     OBS.append(ClimateObs.filter(regex=f'-{var}').rename(columns = lambda x: x[0:3]))
-All_obs = pd.concat(OBS,keys = var_list)
+observed_data = pd.concat(OBS,keys = var_list)
 del OBS[:]
 
 date = datetime.datetime.now()
+col_names = observed_data.columns
 
 #grib_path = "cmc/summary_V2024"
 #daily_summary_path = 'ClimateFOR/cmc/daily_forecast_summary/'
-grib_path = "ecmwf/ifs00Z_summary"
-daily_summary_path = 'ClimateFOR/ecmwf_ifs00Z/daily_forecast_summary/'
-daily_corrected_path = 'ClimateFOR/ecmwf_ifs00Z/daily_corrected_summary/'
-config_list_P = [GetGribConfig.GribECMWF2()]
-config_list_T = [GetGribConfig.GribECMWF1()]
+ifs_grib_path = "ecmwf/ifs00Z_summary"
+ifs_daily_summary_path = 'ClimateFOR/ecmwf_ifs00Z/daily_forecast_summary/'
+ifs_daily_corrected_path = 'ClimateFOR/ecmwf_ifs00Z/daily_corrected_summary/'
+config_IFS_P = [GetGribConfig.GribECMWF2()]
+config_IFS_T = [GetGribConfig.GribECMWF1()]
 
-obj_summary_list = ostore.list_objects(daily_summary_path ,return_file_names_only=True)
+obj_summary_list = ostore.list_objects(ifs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
 if len(summary_dates)>0:
     days_back = min(abs((max(summary_dates) - date).days),6)
@@ -154,50 +205,26 @@ else:
     days_back = 6
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
-for dt in datelist:
-    for_PC = read_forecast(date=dt,config_list=config_list_P,grib_path=grib_path)
-    for_TA = read_forecast(date=dt,config_list=config_list_T,grib_path=grib_path)
-    for_TA = split_duplicates(for_TA)
-    #Precipitation computed 1am-1am in Excel, midnight to midnight here:
-    PC_daily = for_PC.groupby(pd.Grouper(axis=0, freq = 'D')).sum()
-    TX_daily = for_TA.groupby(pd.Grouper(axis=0, freq = 'D')).max()
-    #TMin computed between 10 am previous day and 7 am.
-    #Shift datetime index by 2 hours and compute Tmin between 00:00 and 09:00, equivalent to 10pm - 7am for the unshifted index:
-    for_TA.index = for_TA.index + pd.Timedelta('2h')
-    TN_daily = for_TA.between_time('00:00','9:00').groupby(pd.Grouper(axis=0, freq = 'D')).min()
-    All_daily = pd.concat([TX_daily,TN_daily,PC_daily],keys = ['TX','TN','PC'])
-    day = dt.replace(hour=0,minute=0,second=0,microsecond=0)
-    All_daily = All_daily.loc[All_daily.index.get_level_values(1)>=day,:].round(2)
-    All_daily.index = All_daily.index.set_names(['Variable','Date'])
-    daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
-    df_to_objstore(All_daily,daily_summary_fpath)
 
-forecast_list = list()
-date = date.replace(hour=0,minute=0,second=0,microsecond=0)
-datelist = pd.date_range(end=date, periods=6)
-for dt in datelist:
-    daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
-    forecast_list.append(objstore_to_df(daily_summary_fpath, index_col=[0,1]))
-forecast_data = pd.concat(forecast_list,keys = datelist)
-del forecast_list[:]
+forecast_daily_summary(ifs_grib_path, datelist, config_IFS_T, config_IFS_P, ifs_daily_summary_path, col_names)
+bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
 
-var = "TX"
-TX_bias = compute_mean_bias(forecast_data,All_obs,'TX',range(0,3),range(1,4))
-#Current day Tmin bias gets4x weight in bias calculation
-TN_bias = compute_mean_bias(forecast_data,All_obs,'TN',range(0,4),range(0,3))
-forecast_corr = forecast_data.loc[date,:].copy()
-forecast_corr.loc["TX",:] = pd.concat({"TX": forecast_corr.loc["TX",:].add(TX_bias)})
-#Set current day observed minimum temperature to observed values:
-forecast_corr.loc[("TN",date.strftime('%Y-%m-%d'))] = All_obs.loc[("TN",date)]
-forecast_corr.loc["TN",:] = pd.concat({"TN": forecast_corr.loc["TN",:].add(TN_bias)})
-#Round corrected daily forecast data to one decimal place:
-forecast_corr = forecast_corr.round(1)
-forecast_corr.index = forecast_corr.index.set_names(['Variable','Date'])
+aifs_grib_path = "ecmwf/aifs00Z_summary"
+aifs_daily_summary_path = 'ClimateFOR/ecmwf_aifs00Z/daily_forecast_summary/'
+aifs_daily_corrected_path = 'ClimateFOR/ecmwf_aifs00Z/daily_corrected_summary/'
+config_AIFS_P = [GetGribConfig.GribECMWF4()]
+config_AIFS_T = [GetGribConfig.GribECMWF3()]
 
-daily_corrected_fpath = os.path.join(daily_corrected_path,date.strftime("%Y%m%d.csv"))
-df_to_objstore(forecast_corr,daily_corrected_fpath)
-#Obs has datetime index, forecast has regular index, causing issues?
+obj_summary_list = ostore.list_objects(aifs_daily_summary_path ,return_file_names_only=True)
+summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
+if len(summary_dates)>0:
+    days_back = min(abs((max(summary_dates) - date).days),6)
+else:
+    days_back = 6
 
+datelist = pd.date_range(end=date, periods=days_back).tolist()
+forecast_daily_summary(aifs_grib_path, datelist, config_AIFS_T, config_AIFS_P, aifs_daily_summary_path, col_names)
+bias_correction(date, observed_data, aifs_daily_summary_path, aifs_daily_corrected_path)
 
 #Save daily forecast summaries as csv files
 #Check dates with grib files available vs csv summaries. Produce csv summaries for for all dates with data available
