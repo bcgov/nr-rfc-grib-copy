@@ -226,6 +226,24 @@ datelist = pd.date_range(end=date, periods=days_back).tolist()
 forecast_daily_summary(aifs_grib_path, datelist, config_AIFS_T, config_AIFS_P, aifs_daily_summary_path, col_names)
 bias_correction(date, observed_data, aifs_daily_summary_path, aifs_daily_corrected_path)
 
+
+gfs_grib_path = "NWP/gfs00Z_summary"
+gfs_daily_summary_path = 'ClimateFOR/gfs00Z/daily_forecast_summary/'
+gfs_daily_corrected_path = 'ClimateFOR/gfs00Z/daily_corrected_summary/'
+config_GFS_P = [GetGribConfig.GribGFS2()]
+config_GFS_T = [GetGribConfig.GribGFS1()]
+
+obj_summary_list = ostore.list_objects(gfs_daily_summary_path ,return_file_names_only=True)
+summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
+if len(summary_dates)>0:
+    days_back = min(abs((max(summary_dates) - date).days),6)
+else:
+    days_back = 6
+
+datelist = pd.date_range(end=date, periods=days_back).tolist()
+forecast_daily_summary(gfs_grib_path, datelist, config_GFS_T, config_GFS_P, gfs_daily_summary_path, col_names)
+bias_correction(date, observed_data, gfs_daily_summary_path, gfs_daily_corrected_path)
+
 #Save daily forecast summaries as csv files
 #Check dates with grib files available vs csv summaries. Produce csv summaries for for all dates with data available
 

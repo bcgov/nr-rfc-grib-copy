@@ -341,6 +341,46 @@ class GribECMWF4(GribConfig):
     extract_code = "P"
     var = "tp"
 
+class GribGFS1(GribConfig):
+
+    model_number = "00"
+    iteratorlist = list(range(0,246,3))
+    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = 'GFS{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
+    url_template = (
+        "https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{datestr}/{model_number}/atmos/gfs.t{model_number}z.pgrb2.0p25.f{iterator}"
+    )
+    model_name = 'gfs'
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
+    extract_code = "T"
+    var = "TMP"
+    subset_keys = [":TMP:", ":2 m above ground:"]
+
+class GribGFS2(GribConfig):
+
+    model_number = "00"
+    iteratorlist = list(range(0,246,3))
+    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = 'GFS{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
+    # url_template = (
+    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+    # )
+    url_template = (
+        "https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{datestr}/{model_number}/atmos/gfs.t{model_number}z.pgrb2.0p25.f{iterator}"
+    )
+    model_name = 'gfs'
+    amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
+    date_str_format = "%Y%m%d"
+    timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
+    extract_code = "P"
+    var = "PRATE"
+    subset_keys = ":PRATE:"
+
 class GribConfigCollection:
     def __init__(self, date_str=None):
         self.date_str = date_str

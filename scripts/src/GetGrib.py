@@ -61,7 +61,10 @@ class GetGrib:
             url = self.get_url(iterator=iterval)
             LOGGER.debug(f"url: {url}")
             src_file = self.get_src_file(iterator=iterval)
-            full_url = os.path.join(url, src_file)
+            if hasattr(self.config, 'subset_keys'):
+                full_url = url
+            else:
+                full_url = os.path.join(url, src_file)
             dest_file = os.path.join(self.dest_folder, src_file)
             LOGGER.info(f"url to aquire file from: {full_url}")
             if self.config.url_template=="ecmwf":
@@ -81,10 +84,22 @@ class GetGrib:
             with multiprocessing.Pool(4) as p:
                 p.map(self._get, get_arg_list)
 
+
     def _get(self, url_destfile_dict):
         LOGGER.debug("starting task ...")
 
-        r = requests.get(url_destfile_dict['url'], allow_redirects=True)
+        if hasattr(self.config, 'subset_keys'):
+            idx_path = f'{url_destfile_dict['url']}.idx'
+            idx_content = requests.get(idx_path, allow_redirects=True).text
+            idx_lines = idx_content.splitlines()
+            var_i = [n for n, x in enumerate(idx_lines) if all(st in x for st in self.config.subset_keys)]
+            i = var_i[0]
+            start = int(idx_lines[i].split(":")[1])
+            end = int(idx_lines[i+1].split(":")[1]) - 1 if i+1 < len(idx_lines) else None
+            headers = {"Range": f"bytes={start}-{end}"}
+            r = requests.get(url_destfile_dict['url'], headers=headers, allow_redirects=True)
+        else:
+            r = requests.get(url_destfile_dict['url'], allow_redirects=True)
         LOGGER.debug(f"request: {r.status_code}")
         if r.status_code == 404:
             LOGGER.warning(f"could not find the file: {url_destfile_dict['url']}")
@@ -326,6 +341,6 @@ if __name__ == '__main__':
     #reg1_config = GetGribConfig.GribRegional_1()
     #reg1_get = GetGrib(dest_folder, reg1_config)
     #reg1_get.get()
-    reg1_config = GetGribConfig.GribECMWF1()
+    reg1_config = GetGribConfig.GribGFS1()
     reg1_get = GetGrib(dest_folder, reg1_config)
     reg1_get.get()

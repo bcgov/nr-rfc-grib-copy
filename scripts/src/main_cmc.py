@@ -87,6 +87,7 @@ def persist_gribs_to_object_store(date_str, grib_folder, summary_folder, ostore_
 
 if __name__ == "__main__":
     date_str = None
+    #date_str = "20250709"
     if len(sys.argv) > 1:
         date_str = sys.argv[1]
 
@@ -128,3 +129,13 @@ if __name__ == "__main__":
                                 summary_folder='ecmwf/aifs00Z_summary')
     #get_extract_gribs(date_str=date_str)
     #persist_gribs_to_object_store(date_str=date_str)
+    gfs_configs = []
+    gfs_configs.append(GetGribConfig.GribGFS1())
+    gfs_configs.append(GetGribConfig.GribGFS2())
+    get_extract_gribs(date_str=date_str,
+                    GribConfigList=gfs_configs,
+                    grib_folder='NWP/gfs00Z',
+                    summary_folder='NWP/gfs00Z_summary')
+    persist_gribs_to_object_store(date_str=date_str,
+                                grib_folder='NWP/gfs00Z',
+                                summary_folder='NWP/gfs00Z_summary')
