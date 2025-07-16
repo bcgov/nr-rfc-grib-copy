@@ -89,7 +89,7 @@ class GetGrib:
         LOGGER.debug("starting task ...")
 
         if hasattr(self.config, 'subset_keys'):
-            idx_path = f'{url_destfile_dict['url']}.idx'
+            idx_path = f"{url_destfile_dict['url']}.idx"
             idx_content = requests.get(idx_path, allow_redirects=True).text
             idx_lines = idx_content.splitlines()
             var_i = [n for n, x in enumerate(idx_lines) if all(st in x for st in self.config.subset_keys)]
