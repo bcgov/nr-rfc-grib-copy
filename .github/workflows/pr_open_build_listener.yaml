@@ -30,7 +30,7 @@ jobs:
       run:
         shell: bash
     name: calculateImageTag
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       imagetag: ${{ steps.CalculateImageTagstep.outputs.IMAGE_TAG}}
     steps:
@@ -49,7 +49,7 @@ jobs:
         shell: bash
     needs: CalculateImageTags
     name: 'Build Listener Container Image'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       DEBUG_DEPLOY: false
 
@@ -93,7 +93,7 @@ jobs:
         shell: bash
     needs: [CalculateImageTags, BuildContainerImage]
     name: 'Deploy AMQP Listener Image'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: dev
 
     steps:
@@ -156,7 +156,7 @@ jobs:
         echo "OC_ROUTE=https://$route_path" >> $GITHUB_ENV
 
     - name: Comment PR
-      uses: thollander/actions-comment-pull-request@v2
+      uses: thollander/actions-comment-pull-request@v3
       with:
         message: |
           Route to deployed app is: ${{ env.OC_ROUTE }}/docs
