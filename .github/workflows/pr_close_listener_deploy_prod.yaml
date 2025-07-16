@@ -20,7 +20,7 @@ jobs:
   # Clean up OpenShift when PR closed, no conditions
   cleanup-openshift:
     name: Cleanup OpenShift
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: dev
 
     steps:
@@ -53,7 +53,7 @@ jobs:
     name: Image Promotions
     # TODO: uncomment once working
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     environment: prod
     permissions:
       packages: write
