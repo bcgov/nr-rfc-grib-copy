@@ -1,2 +1,2 @@
-nr_objstore_util==0.10.0
-ecmwf-opendata==0.3.14
+nr_objstore_util==0.11.0
+ecmwf-opendata==0.3.22
