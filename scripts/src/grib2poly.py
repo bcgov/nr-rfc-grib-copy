@@ -89,6 +89,33 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             dy = int(splitpath[-2][6:8])
             run_hr = int(splitpath[-2][8:10])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
+        elif type == 'gfs':
+            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
+            splitpath = local_path.split('_')
+            hr = int(splitpath[-1][1:4])
+            yr = int(splitpath[-2][0:4])
+            mn = int(splitpath[-2][4:6])
+            dy = int(splitpath[-2][6:8])
+            run_hr = int(splitpath[1].split('/')[-1][3:5])
+            dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
+        elif type == 'ifs':
+            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
+            splitpath = local_path.split('_')
+            hr = int(splitpath[-1][1:4])
+            yr = int(splitpath[-2][0:4])
+            mn = int(splitpath[-2][4:6])
+            dy = int(splitpath[-2][6:8])
+            run_hr = int(splitpath[1].split('/')[-1][8:10])
+            dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
+        elif type == 'aifs':
+            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
+            splitpath = local_path.split('_')
+            hr = int(splitpath[-1][1:4])
+            yr = int(splitpath[-2][0:4])
+            mn = int(splitpath[-2][4:6])
+            dy = int(splitpath[-2][6:8])
+            run_hr = int(splitpath[1].split('/')[-1][9:11])
+            dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         else:
             local_path = os.path.join('raw_data',file_list[i].split('/')[-1])
             splitpath = local_path.split('/')
@@ -109,11 +136,30 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             stats = rasterstats.zonal_stats(zone, raster, affine=affine,stats="mean",all_touched=True)
             for j in range(len(stats)):
                 output.loc[dt,colnames[j]] = stats[j]['mean']
+    if type in ['forecast','gfs']:
+        output.sort_index(inplace=True)
+        output=output.astype(float)*3600
+    elif type == "ifs":
+        output.sort_index(inplace=True)
+        output=output.astype(float).interpolate()*1000
+        output.iloc[1:,:] = output.diff().iloc[1:,:]
+        output = output.mask(output<0,0)
+    elif type == "aifs":
+        output.sort_index(inplace=True)
+        output=output.astype(float).interpolate()
+        output.iloc[1:,:] = output.diff().iloc[1:,:]
+        output = output.mask(output<0,0)
     output.ffill(axis=0,inplace=True)
-    if type == 'forecast':
-        output=output*3600
     output = output.astype(float).round(2)
     return output
+
+def return_grib_list(objpath, keyword):
+    ostore_objs = ostore.list_objects(objpath,return_file_names_only=True)
+    file_list = list()
+    for fname in ostore_objs:
+        if keyword in fname:
+            file_list.append(fname)
+    return file_list
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
 
@@ -121,34 +167,74 @@ days_back = 0
 current_date = datetime.datetime.now().replace(hour=0,minute=0, second=0,microsecond=0) - datetime.timedelta(days=days_back)
 end_date = current_date + datetime.timedelta(days=9, hours=23)
 dt_text = current_date.strftime('%Y%m%d')
-objpath = os.path.join('cmc/gribs',dt_text)
+ECCC_objpath = os.path.join('cmc/gribs',dt_text)
+IFS_objpath = os.path.join('ecmwf/ifs00Z',dt_text)
+AIFS_objpath = os.path.join('ecmwf/aifs00Z',dt_text)
+GFS_objpath = os.path.join('NWP/gfs00Z',dt_text)
 CLEVER_obj_path = os.path.join('cmc/CleverBasinsSummary',f'{dt_text}.csv')
+CLEVER_ifs_objpath = os.path.join('ecmwf/ifs00Z_CleverBasinsSummary',f'{dt_text}.csv')
+CLEVER_aifs_objpath = os.path.join('ecmwf/aifs00Z_CleverBasinsSummary',f'{dt_text}.csv')
+CLEVER_gfs_objpath = os.path.join('NWP/gfs00Z_CleverBasinsSummary',f'{dt_text}.csv')
 COFFEE_obj_path = os.path.join('cmc/COFFEEBasinsSummary',f'{dt_text}.csv')
 
 
 
-ostore_objs = ostore.list_objects(objpath,return_file_names_only=True)
+""" ostore_objs = ostore.list_objects(objpath,return_file_names_only=True)
 file_list = list()
 for fname in ostore_objs:
     if 'PRATE' in fname:
         #hr_index.append(int(fname.split('.')[-2][-3:]))
-        file_list.append(fname)
+        file_list.append(fname) """
 hr_index = pd.date_range(start=current_date,end=end_date,freq='h')
 
-#CLEVER Zonal Precip:
+#Load shape files:
 clever_shp_path = 'data/shape/CLEVER/CLEVER_BASINS.shp'
 clever_shp = geopandas.read_file(clever_shp_path)
-output_template = pd.DataFrame(data=None, index = hr_index, columns = clever_shp.WSDG_ID)
-CLEVER_precip = watershed_forecast_averaging(file_list, clever_shp, output_template)
-df_to_objstore(CLEVER_precip,CLEVER_obj_path)
-
-#COFFEE Zonal Precip:
 coffee_shp_path = 'data/shape/COFFEE/COFFEE_BASIN.shp'
 coffee_shp = geopandas.read_file(coffee_shp_path)
-output_template = pd.DataFrame(data=None, index = hr_index, columns = coffee_shp .WSDG_ID)
-COFFEE_precip = watershed_forecast_averaging(file_list, coffee_shp, output_template)
-COFFEE_daily_precip = COFFEE_precip.resample('D').sum()
-df_to_objstore(COFFEE_daily_precip,COFFEE_obj_path)
+
+#CLEVER Zonal Precip:
+output_template = pd.DataFrame(data=None, index = hr_index, columns = clever_shp.WSDG_ID)
+
+#ECCC:
+if CLEVER_obj_path not in ostore.list_objects(os.path.dirname(CLEVER_obj_path),return_file_names_only=True):
+    ECCC_grib_list = return_grib_list(ECCC_objpath, 'PRATE')
+    CLEVER_precip = watershed_forecast_averaging(ECCC_grib_list, clever_shp, output_template)
+    df_to_objstore(CLEVER_precip,CLEVER_obj_path)
+
+#GFS:
+if CLEVER_gfs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_gfs_objpath),return_file_names_only=True):
+    try:
+        GFS_grib_list = return_grib_list(GFS_objpath, 'PRATE')
+        CLEVER_precip = watershed_forecast_averaging(GFS_grib_list, clever_shp, output_template, type = "gfs")
+        df_to_objstore(CLEVER_precip,CLEVER_gfs_objpath)
+    except:
+        print("GFS processing failed")
+
+#IFS:
+if CLEVER_ifs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_ifs_objpath),return_file_names_only=True):
+    try:
+        IFS_grib_list = return_grib_list(IFS_objpath, 'tp')
+        CLEVER_precip = watershed_forecast_averaging(IFS_grib_list, clever_shp, output_template, type = "ifs")
+        df_to_objstore(CLEVER_precip,CLEVER_ifs_objpath)
+    except:
+        print("IFS processing failed")
+
+#AIFS:
+if CLEVER_aifs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_aifs_objpath),return_file_names_only=True):
+    try:
+        AIFS_grib_list = return_grib_list(AIFS_objpath, 'tp')
+        CLEVER_precip = watershed_forecast_averaging(AIFS_grib_list, clever_shp, output_template, type = "aifs")
+        df_to_objstore(CLEVER_precip,CLEVER_aifs_objpath)
+    except:
+        print("GFS processing failed")
+
+#COFFEE Zonal Precip:
+if COFFEE_obj_path not in ostore.list_objects(os.path.dirname(COFFEE_obj_path),return_file_names_only=True):
+    output_template = pd.DataFrame(data=None, index = hr_index, columns = coffee_shp.WSDG_ID)
+    COFFEE_precip = watershed_forecast_averaging(ECCC_grib_list, coffee_shp, output_template)
+    COFFEE_daily_precip = COFFEE_precip.resample('D').sum()
+    df_to_objstore(COFFEE_daily_precip,COFFEE_obj_path)
 
 # Transform to a difference CRS.
 
@@ -195,10 +281,10 @@ for dt in importdates:
 
 output_template = pd.DataFrame(data=None, index = importdates - datetime.timedelta(days=1), columns = coffee_shp.WSDG_ID)
 COFFEE_precip = watershed_forecast_averaging(file_list, coffee_shp, output_template, type = 'analysis')
-output_template = pd.DataFrame(data=None, index = importdates - datetime.timedelta(days=1), columns = clever_shp.WSDG_ID)
-CLEVER_precip = watershed_forecast_averaging(file_list, clever_shp, output_template, type = 'analysis')
-
 COFFEE_summary = update_data(COFFEE_summary, COFFEE_precip)
 df_to_objstore(COFFEE_summary, COFFEE_summary_fpath, onprem=False)
+
+output_template = pd.DataFrame(data=None, index = importdates - datetime.timedelta(days=1), columns = clever_shp.WSDG_ID)
+CLEVER_precip = watershed_forecast_averaging(file_list, clever_shp, output_template, type = 'analysis')
 CLEVER_summary = update_data(CLEVER_summary, CLEVER_precip)
 df_to_objstore(CLEVER_summary, CLEVER_summary_fpath, onprem=False)
