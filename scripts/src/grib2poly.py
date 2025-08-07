@@ -9,6 +9,10 @@ import rasterio
 import geopandas
 import rasterstats
 import logging
+import logging.config
+
+log_config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'logging.config')
+logging.config.fileConfig(log_config_path)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -141,7 +145,7 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             stats = rasterstats.zonal_stats(zone, raster, affine=affine,stats="mean",all_touched=True)
             for j in range(len(stats)):
                 output.loc[dt,colnames[j]] = stats[j]['mean']
-            LOGGER.info(f"Processed time {dt: %Y%m%d %H}:00, first 5 columns: {output.loc[dt,colnames[0:5]]}")
+            LOGGER.info(f"Processing complete for dt = {dt: %Y%m%d %H}:00")
     if type in ['forecast','gfs']:
         output.sort_index(inplace=True)
         output=output.astype(float)*3600
