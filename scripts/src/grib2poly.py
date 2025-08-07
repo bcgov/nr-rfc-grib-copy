@@ -8,9 +8,12 @@ import NRUtil.NRObjStoreUtil as NRObjStoreUtil
 import rasterio
 import geopandas
 import rasterstats
+import logging
 
+LOGGER = logging.getLogger(__name__)
 
 def objstore_to_df(objpath, local_path = None):
+    LOGGER.info(f"Fetching {objpath} from object storage")
     filename = objpath.split("/")[-1]
     filetype = filename.split(".")[-1]
     local_folder = 'raw_data/temp_file'
@@ -30,6 +33,7 @@ def objstore_to_df(objpath, local_path = None):
     return output
 
 def df_to_objstore(df, objpath, onprem=False):
+    LOGGER.info(f"Writing {objpath} to object storage")
     filename = objpath.split("/")[-1]
     filetype = filename.split(".")[-1]
     if onprem:
@@ -79,6 +83,7 @@ def get_summary(summary_fpath, year):
 
 def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
     colnames = output.columns
+    LOGGER.info(f"Starting function watershed_forecast_averaging, type = {type}")
     for i in range(len(file_list)):
         if type == 'forecast':
             local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
@@ -136,6 +141,7 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             stats = rasterstats.zonal_stats(zone, raster, affine=affine,stats="mean",all_touched=True)
             for j in range(len(stats)):
                 output.loc[dt,colnames[j]] = stats[j]['mean']
+            LOGGER.info(f"Processed time {dt: %Y%m%d %H}:00, first 5 columns: {output.loc[dt,colnames[0:5]]}")
     if type in ['forecast','gfs']:
         output.sort_index(inplace=True)
         output=output.astype(float)*3600
@@ -151,14 +157,17 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
         output = output.mask(output<0,0)
     output.ffill(axis=0,inplace=True)
     output = output.astype(float).round(2)
+    LOGGER.info(f"watershed_forecast_averaging complete, sum of first 5 columns: {output.sum()[0:5]}")
     return output
 
 def return_grib_list(objpath, keyword):
     ostore_objs = ostore.list_objects(objpath,return_file_names_only=True)
+    LOGGER.info(f"return_grib_list found {len(ostore_objs)} objects in the ostore folder: {objpath}")
     file_list = list()
     for fname in ostore_objs:
         if keyword in fname:
             file_list.append(fname)
+    LOGGER.info(f"{len(file_list)} of {len(ostore_objs)} objects contain keyword {keyword}")
     return file_list
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
@@ -198,9 +207,12 @@ output_template = pd.DataFrame(data=None, index = hr_index, columns = clever_shp
 
 #ECCC:
 if CLEVER_obj_path not in ostore.list_objects(os.path.dirname(CLEVER_obj_path),return_file_names_only=True):
+    LOGGER.info(f" {CLEVER_obj_path}")
     ECCC_grib_list = return_grib_list(ECCC_objpath, 'PRATE')
     CLEVER_precip = watershed_forecast_averaging(ECCC_grib_list, clever_shp, output_template)
     df_to_objstore(CLEVER_precip,CLEVER_obj_path)
+else:
+    LOGGER.info(f"{CLEVER_obj_path} already exists")
 
 #GFS:
 if CLEVER_gfs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_gfs_objpath),return_file_names_only=True):
@@ -210,6 +222,8 @@ if CLEVER_gfs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_gfs_objp
         df_to_objstore(CLEVER_precip,CLEVER_gfs_objpath)
     except:
         print("GFS processing failed")
+else:
+    LOGGER.info(f"{CLEVER_gfs_objpath} already exists")
 
 #IFS:
 if CLEVER_ifs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_ifs_objpath),return_file_names_only=True):
@@ -219,6 +233,8 @@ if CLEVER_ifs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_ifs_objp
         df_to_objstore(CLEVER_precip,CLEVER_ifs_objpath)
     except:
         print("IFS processing failed")
+else:
+    LOGGER.info(f"{CLEVER_ifs_objpath} already exists")
 
 #AIFS:
 if CLEVER_aifs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_aifs_objpath),return_file_names_only=True):
@@ -228,6 +244,9 @@ if CLEVER_aifs_objpath not in ostore.list_objects(os.path.dirname(CLEVER_aifs_ob
         df_to_objstore(CLEVER_precip,CLEVER_aifs_objpath)
     except:
         print("GFS processing failed")
+else:
+    LOGGER.info(f"{CLEVER_aifs_objpath} already exists")
+
 
 #COFFEE Zonal Precip:
 if COFFEE_obj_path not in ostore.list_objects(os.path.dirname(COFFEE_obj_path),return_file_names_only=True):
@@ -235,6 +254,9 @@ if COFFEE_obj_path not in ostore.list_objects(os.path.dirname(COFFEE_obj_path),r
     COFFEE_precip = watershed_forecast_averaging(ECCC_grib_list, coffee_shp, output_template)
     COFFEE_daily_precip = COFFEE_precip.resample('D').sum()
     df_to_objstore(COFFEE_daily_precip,COFFEE_obj_path)
+else:
+    LOGGER.info(f"{COFFEE_obj_path} already exists")
+
 
 # Transform to a difference CRS.
 
