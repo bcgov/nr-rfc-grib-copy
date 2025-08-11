@@ -86,6 +86,7 @@ def get_summary(summary_fpath, year):
     return summary
 
 def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
+    output = output.copy()
     colnames = output.columns
     LOGGER.info(f"Starting function watershed_forecast_averaging, type = {type}")
     for i in range(len(file_list)):
