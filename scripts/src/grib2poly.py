@@ -143,25 +143,23 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             #Rasterstats averages all pixels which touch the polygon, or all pixels whose centoids are within the polygon
             #For exact averaging, weighting pixels by fraction within polygon, investigate this package:
             #https://github.com/isciences/exactextract
-            stats = rasterstats.zonal_stats(zone, raster, affine=affine,stats="mean",all_touched=True)
+            stats = rasterstats.zonal_stats(zone, raster, affine=affine,stats="mean",all_touched=True,nodata=None)
             for j in range(len(stats)):
                 output.loc[dt,colnames[j]] = stats[j]['mean']
             LOGGER.info(f"Processing complete for dt = {dt: %Y%m%d %H}:00")
+    output.sort_index(inplace=True)
+    output=output.astype(float)
     if type in ['forecast','gfs']:
-        output.sort_index(inplace=True)
-        output=output.astype(float)*3600
+        output=output*3600
     elif type == "ifs":
-        output.sort_index(inplace=True)
-        output=output.astype(float).interpolate()*1000
+        output=output.interpolate()*1000
         output.iloc[1:,:] = output.diff().iloc[1:,:]
         output = output.mask(output<0,0)
     elif type == "aifs":
-        output.sort_index(inplace=True)
-        output=output.astype(float).interpolate()
+        output=output.interpolate()
         output.iloc[1:,:] = output.diff().iloc[1:,:]
         output = output.mask(output<0,0)
-    output.ffill(axis=0,inplace=True)
-    output = output.astype(float).round(2)
+    output = output.round(2).ffill(axis=0)
     LOGGER.info(f"watershed_forecast_averaging complete, sum of first 5 columns: {output.sum()[0:5]}")
     return output
 
