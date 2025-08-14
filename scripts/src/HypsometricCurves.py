@@ -1,0 +1,61 @@
+import datetime
+import os
+import datetime
+import pandas as pd
+import numpy as np
+import NRUtil.NRObjStoreUtil as NRObjStoreUtil
+import rasterio
+import rasterio.mask
+import geopandas
+
+ostore = NRObjStoreUtil.ObjectStoreUtil()
+clever_shp_path = 'data/shape/CLEVER/CLEVER_BASINS.shp'
+clever_shp = geopandas.read_file(clever_shp_path)
+print(clever_shp.crs)
+clever_shp = clever_shp.to_crs("EPSG:3979")
+clever_bounds = clever_shp.bounds
+cog_path = "https://datacube-prod-data-public.s3.ca-central-1.amazonaws.com/store/elevation/mrdem/mrdem-30/mrdem-30-dtm.tif"
+
+def ecdf(a):
+    x, counts = np.unique(a, return_counts=True)
+    cusum = np.cumsum(counts)
+    return x, np.round(cusum / cusum[-1],5)
+
+# min_x = int(clever_bounds.minx.min()) - 1
+# min_y = int(clever_bounds.miny.min()) - 1
+# max_x = int(clever_bounds.maxx.max()) + 1
+# max_y = int(clever_bounds.maxy.max()) + 1
+for i in range(len(clever_shp.WSDG_ID)):
+        colname = clever_shp.WSDG_ID[i]
+        try:
+                min_x = int(clever_bounds.minx[i]) - 1
+                min_y = int(clever_bounds.miny[i]) - 1
+                max_x = int(clever_bounds.maxx[i]) + 1
+                max_y = int(clever_bounds.maxy[i]) + 1
+
+                output_path = f"data/DEM/mrdem_bc_{clever_shp.WSDG_ID[i]}.tif"
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+                vector = clever_shp.iloc[i].geometry
+                with rasterio.open(cog_path) as src:
+                        #window = src.window(min_x, min_y, max_x, max_y)
+                        #raster_data = src.read(window=window)
+                        raster_data, out_transform=rasterio.mask.mask(src,[vector],crop=True)
+
+                raster_data = raster_data.astype(int)
+                elevation_data = raster_data[raster_data>=0]
+                elevation_data = 10*np.round(elevation_data/10).astype(int)
+                x, cdf = ecdf(elevation_data)
+
+                ecdf_df = pd.DataFrame(data = cdf, index=x, columns=[colname])
+                fname = f"data/ECDF/{colname}_ECDF.csv"
+                oname = f"Spatial_Files/DEM/ECDF/CLEVER/{colname}_ECDF.csv"
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
+                ecdf_df.to_csv(fname, index_label="Elevation")
+                ostore.put_object(local_path=fname, ostore_path=oname)
+        except:
+               print(f"{colname} failed")
+
+# objpath = "objectstore2.nrs.bcgov/RSImgShare/MRDEM/mrdem-30-dtm-bc.tif"
+        # with rasterio.open(objpath) as src:
+        #     raster_data = src.read()
