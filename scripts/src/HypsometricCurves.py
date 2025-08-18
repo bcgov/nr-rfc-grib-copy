@@ -8,10 +8,10 @@ import rasterio
 import rasterio.mask
 import geopandas
 
-from arcgis.gis import GIS
-from arcgis.features import FeatureLayer
+#from arcgis.gis import GIS
+#from arcgis.features import FeatureLayer
 #from IPython.display import display
-gis = GIS()
+#gis = GIS()
 
 # feature_url = "https://services6.arcgis.com/ubm4tcTYICKBpist/ArcGIS/rest/services/Snow_Basins_Indices_View/FeatureServer/0"
 # feature_layer = FeatureLayer(feature_url)
