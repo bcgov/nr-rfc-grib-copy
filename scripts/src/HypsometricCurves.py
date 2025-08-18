@@ -13,11 +13,13 @@ from arcgis.features import FeatureLayer
 #from IPython.display import display
 gis = GIS()
 
-feature_url = "https://services6.arcgis.com/ubm4tcTYICKBpist/ArcGIS/rest/services/Snow_Basins_Indices_View/FeatureServer/0"
-feature_layer = FeatureLayer(feature_url)
-feature_set = feature_layer.query()
-feature_geojson = feature_set.to_geojson
-snow_basins_shp = geopandas.read_file(feature_geojson)
+# feature_url = "https://services6.arcgis.com/ubm4tcTYICKBpist/ArcGIS/rest/services/Snow_Basins_Indices_View/FeatureServer/0"
+# feature_layer = FeatureLayer(feature_url)
+# feature_set = feature_layer.query()
+# feature_geojson = feature_set.to_geojson
+# snow_basins_shp = geopandas.read_file(feature_geojson)
+snowbasins_shp_path = 'data/shape/SnowBasins/Snow_Basins_Indexes.shp'
+snow_basins_shp = geopandas.read_file(snowbasins_shp_path)
 snow_basins_shp = snow_basins_shp.to_crs("EPSG:3979")
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
