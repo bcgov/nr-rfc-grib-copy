@@ -3,6 +3,6 @@ boto3==1.27.0
 pytz==2023.3
 minio==7.1.15
 beautifulsoup4==4.12.2
-ecmwf-opendata==0.3.14
+ecmwf-opendata==0.3.22
 pandas==2.2.2
 openpyxl==3.1.5
