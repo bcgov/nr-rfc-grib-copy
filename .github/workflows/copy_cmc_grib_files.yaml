@@ -7,7 +7,7 @@ on:
   # cron schedules are in UTC
   # this job should run at 5.31 am pst, which translates to 1.31 pm.
   schedule:
-    - cron: '31 13 * * *'
+    - cron: '31 14 * * *'
   workflow_dispatch:
   repository_dispatch:
     types: run-cmc-grib-download
