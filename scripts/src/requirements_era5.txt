@@ -1,0 +1,2 @@
+nr_objstore_util==0.11.0
+ecmwf-datastores-client==0.4.1
