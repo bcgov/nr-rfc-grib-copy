@@ -86,7 +86,7 @@ def delete_all_non_current_version(ostore_path):
 
         if not versions_to_delete:
             break
-        version_string = '\n'.join([v['VersionId'] + ' ' + str(v['LastModified']) for v in versions_to_delete])
+        # version_string = '\n'.join([v['VersionId'] + ' ' + str(v['LastModified']) for v in versions_to_delete])
 
         versions_to_delete_send = []
         for ver in versions_to_delete:
@@ -141,4 +141,18 @@ for key, value in variable_dict.items():
         }
         #Construct filename from key (variable name) and date:
         filename = f"ERA5_{key}_{year}-{month}.nc"
+        ERA5_download(request_update, filename)
+
+#Only update whole year data on Mondays:
+if datelist[0].weekday() == 0:
+    for key, value in variable_dict.items():
+        year = date.strftime("%Y")
+        month_list = [str(num+1).zfill(2) for num in range(12)]
+        request_update = {
+            "variable": [value],
+            "year": year,
+            "month": month_list,
+        }
+        #Construct filename from key (variable name) and date:
+        filename = f"ERA5_{key}_{year}.nc"
         ERA5_download(request_update, filename)
