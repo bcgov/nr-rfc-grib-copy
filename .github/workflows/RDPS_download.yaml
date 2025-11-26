@@ -1,0 +1,50 @@
+name: RDPS Download
+
+on:
+  push:
+    branches:
+      - "main"
+  # cron schedules are in UTC
+  # running at 6 am pst, which translates to 2 pm utc.
+  schedule:
+    - cron: '00 15 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: run-rdps-download
+
+jobs:
+  bias_correct:
+    defaults:
+      run:
+        shell: bash
+    name: 'Download RDPS'
+    runs-on: ubuntu-22.04
+    environment: RUN
+    env:
+      OBJ_STORE_BUCKET: ${{ secrets.OBJ_STORE_BUCKET }}
+      OBJ_STORE_SECRET: ${{ secrets.OBJ_STORE_SECRET }}
+      OBJ_STORE_USER: ${{ secrets.OBJ_STORE_USER }}
+      OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
+
+    steps:
+    - uses: actions/checkout@v3
+      id: checkout
+      with:
+       fetch-depth: 0
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - id: install_dependencies
+      name: install python dependencies
+      shell: bash
+      run: |
+        pip install --upgrade pip
+        pip install -r scripts/requirements.txt
+
+    - id: RDPS_download
+      name: Download RDPS data
+      shell: bash
+      run: |
+        python scripts/src/main_RDPS.py
