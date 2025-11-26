@@ -4,6 +4,8 @@ import datetime
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
 
 ostore_path = 'RFC_DATA/RDPS/'
+local_dir = 'raw_data'
+os.makedirs(local_dir, exist_ok=True)
 
 run_time_list = ['00','06','12','18']
 time_step_list = ['000','001','002','003','004','005']
@@ -16,13 +18,12 @@ date_list = [today, today-datetime.timedelta(days=1)]
 
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
-
 ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
 
 def RDPS_download(ymd,run_time,time_step,var_name):
     url = f'https://hpfx.collab.science.gc.ca/{ymd}/WXO-DD/model_rdps/10km/{run_time}/{time_step}/{ymd}T{run_time}Z_MSC_RDPS_{var_name}_RLatLon0.09_PT{time_step}H.grib2'
     fname = os.path.basename(url)
-    local_path = os.path.join('raw_data',fname)
+    local_path = os.path.join(local_dir,fname)
     obj_path = os.path.join(ostore_path, fname)
     if obj_path not in ostore_objs:
         with requests.get(url, stream=True) as r:
