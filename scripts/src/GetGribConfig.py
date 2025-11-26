@@ -208,11 +208,13 @@ class InvalidExtractCodeError(Exception):
 class GribRegional_1(GribConfig):
     model_number = "06"
     extract_code = "P"
-    url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    #url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_rdps/10km/{model_number}/{iterator}"
     amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_regional.10km.grib2.*.*.#'
     date_str_format = "%Y%m%d"
     iteratorlist = list(range(2, 84))
-    file_template = "CMC_reg_PRATE_SFC_0_ps10km_{datestr}{model_number}_P{iterator}.grib2"
+    #file_template = "CMC_reg_PRATE_SFC_0_ps10km_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = "{datestr}T{model_number}Z_MSC_RDPS_PrecipRate_Sfc_RLatLon0.09_PT{iterator}H.grib2"
     # example of setting timezone to utc.. `timezone = pytz.utc`
     timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
 
@@ -220,11 +222,13 @@ class GribRegional_1(GribConfig):
 class GribRegional_2(GribConfig):
     model_number = "06"
     extract_code = "T"
-    url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    #url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_regional/10km/grib2/{model_number}/{iterator}"
+    url_template = "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_rdps/10km/{model_number}/{iterator}"
     amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_regional.10km.grib2.*.*.#'
     iteratorlist = list(range(0, 84))
     date_str_format = "%Y%m%d"
-    file_template = "CMC_reg_TMP_TGL_2_ps10km_{datestr}{model_number}_P{iterator}.grib2"
+    #file_template = "CMC_reg_TMP_TGL_2_ps10km_{datestr}{model_number}_P{iterator}.grib2"
+    file_template = "{datestr}T{model_number}Z_MSC_RDPS_AirTemp_AGL-2m_RLatLon0.09_PT{iterator}H.grib2"
     # CMC_reg_TMP_TGL_2_ps10km_%YYYY%%MT%%DD%%RH%_P%%A.grib2
     # timezone = pytz.utc
     timezone = pytz.timezone(DEFAULT_GRIB_CONFIG_TZ)
