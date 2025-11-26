@@ -42,6 +42,7 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install -r scripts/requirements.txt
+        pip install -r scripts/src/requirements_era5.txt
 
     - id: RDPS_download
       name: Download RDPS data
