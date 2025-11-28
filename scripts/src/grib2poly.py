@@ -90,18 +90,29 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
     colnames = output.columns
     LOGGER.info(f"Starting function watershed_forecast_averaging, type = {type}")
     for i in range(len(file_list)):
+        fname = file_list[i].split('/')[-1]
         if type == 'forecast':
-            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
-            splitpath = local_path.split('_')
-            hr = int(splitpath[-1][1:4])
-            yr = int(splitpath[-2][0:4])
-            mn = int(splitpath[-2][4:6])
-            dy = int(splitpath[-2][6:8])
-            run_hr = int(splitpath[-2][8:10])
-            dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
+            if 'PrecipRate' in file_list[i]:
+                local_path = os.path.join('raw_data/gribs',fname)
+                splitpath = fname.split('_')
+                hr = int(splitpath[-1][2:5])
+                yr = int(splitpath[0][0:4])
+                mn = int(splitpath[0][4:6])
+                dy = int(splitpath[0][6:8])
+                run_hr = int(splitpath[0][9:11])
+                dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
+            else:
+                local_path = os.path.join('raw_data/gribs',fname)
+                splitpath = fname.split('_')
+                hr = int(splitpath[-1][1:4])
+                yr = int(splitpath[-2][0:4])
+                mn = int(splitpath[-2][4:6])
+                dy = int(splitpath[-2][6:8])
+                run_hr = int(splitpath[-2][8:10])
+                dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         elif type == 'gfs':
-            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
-            splitpath = local_path.split('_')
+            local_path = os.path.join('raw_data/gribs',fname)
+            splitpath = fname.split('_')
             hr = int(splitpath[-1][1:4])
             yr = int(splitpath[-2][0:4])
             mn = int(splitpath[-2][4:6])
@@ -109,8 +120,8 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             run_hr = int(splitpath[1].split('/')[-1][3:5])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         elif type == 'ifs':
-            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
-            splitpath = local_path.split('_')
+            local_path = os.path.join('raw_data/gribs',fname)
+            splitpath = fname.split('_')
             hr = int(splitpath[-1][1:4])
             yr = int(splitpath[-2][0:4])
             mn = int(splitpath[-2][4:6])
@@ -118,8 +129,8 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             run_hr = int(splitpath[1].split('/')[-1][8:10])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         elif type == 'aifs':
-            local_path = os.path.join('raw_data/gribs',file_list[i].split('/')[-1])
-            splitpath = local_path.split('_')
+            local_path = os.path.join('raw_data/gribs',fname)
+            splitpath = fname.split('_')
             hr = int(splitpath[-1][1:4])
             yr = int(splitpath[-2][0:4])
             mn = int(splitpath[-2][4:6])
@@ -127,8 +138,8 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             run_hr = int(splitpath[1].split('/')[-1][9:11])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         else:
-            local_path = os.path.join('raw_data',file_list[i].split('/')[-1])
-            splitpath = local_path.split('/')
+            local_path = os.path.join('raw_data',fname)
+            splitpath = fname.split('/')
             yr = int(splitpath[-1][0:4])
             mn = int(splitpath[-1][4:6])
             dy = int(splitpath[-1][6:8])
@@ -167,8 +178,10 @@ def return_grib_list(objpath, keyword):
     ostore_objs = ostore.list_objects(objpath,return_file_names_only=True)
     LOGGER.info(f"return_grib_list found {len(ostore_objs)} objects in the ostore folder: {objpath}")
     file_list = list()
+    if not isinstance(keyword, list):
+        keyword = [keyword]
     for fname in ostore_objs:
-        if keyword in fname:
+        if any(word in fname for word in keyword):
             file_list.append(fname)
     LOGGER.info(f"{len(file_list)} of {len(ostore_objs)} objects contain keyword {keyword}")
     return file_list
@@ -211,7 +224,7 @@ output_template = pd.DataFrame(data=None, index = hr_index, columns = clever_shp
 #ECCC:
 if CLEVER_obj_path not in ostore.list_objects(os.path.dirname(CLEVER_obj_path),return_file_names_only=True):
     LOGGER.info(f" {CLEVER_obj_path}")
-    ECCC_grib_list = return_grib_list(ECCC_objpath, 'PRATE')
+    ECCC_grib_list = return_grib_list(ECCC_objpath, ['PRATE', 'PrecipRate'])
     CLEVER_precip = watershed_forecast_averaging(ECCC_grib_list, clever_shp, output_template)
     df_to_objstore(CLEVER_precip,CLEVER_obj_path)
 else:
