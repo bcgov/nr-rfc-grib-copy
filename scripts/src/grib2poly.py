@@ -117,7 +117,7 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             yr = int(splitpath[-2][0:4])
             mn = int(splitpath[-2][4:6])
             dy = int(splitpath[-2][6:8])
-            run_hr = int(splitpath[1].split('/')[-1][3:5])
+            run_hr = int(splitpath[0][3:5])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         elif type == 'ifs':
             local_path = os.path.join('raw_data/gribs',fname)
@@ -126,7 +126,7 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             yr = int(splitpath[-2][0:4])
             mn = int(splitpath[-2][4:6])
             dy = int(splitpath[-2][6:8])
-            run_hr = int(splitpath[1].split('/')[-1][8:10])
+            run_hr = int(splitpath[0][8:10])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         elif type == 'aifs':
             local_path = os.path.join('raw_data/gribs',fname)
@@ -135,7 +135,7 @@ def watershed_forecast_averaging(file_list, zone, output, type = 'forecast'):
             yr = int(splitpath[-2][0:4])
             mn = int(splitpath[-2][4:6])
             dy = int(splitpath[-2][6:8])
-            run_hr = int(splitpath[1].split('/')[-1][9:11])
+            run_hr = int(splitpath[0][9:11])
             dt = datetime.datetime(yr,mn,dy) + datetime.timedelta(hours=(hr+run_hr-8))
         else:
             local_path = os.path.join('raw_data',fname)
