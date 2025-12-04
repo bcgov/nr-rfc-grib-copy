@@ -120,6 +120,7 @@ variable_dict = {
     "p": "total_precipitation",
     "s_pressure": "surface_pressure"
 }
+vars_to_sum = ["p","net_solor_radiation","net_thermal_radiation"]
 
 #Get current date:
 date = datetime.datetime.now()
@@ -139,6 +140,8 @@ for key, value in variable_dict.items():
             "year": year,
             "month": [month],
         }
+        if key in vars_to_sum:
+            request_update.update({"daily_statistic": "daily_sum"})
         #Construct filename from key (variable name) and date:
         filename = f"ERA5_{key}_{year}-{month}.nc"
         ERA5_download(request_update, filename)
@@ -153,6 +156,8 @@ if datelist[0].weekday() == 0:
             "year": year,
             "month": month_list,
         }
+        if key in vars_to_sum:
+            request_update.update({"daily_statistic": "daily_sum"})
         #Construct filename from key (variable name) and date:
         filename = f"ERA5_{key}_{year}.nc"
         ERA5_download(request_update, filename)
