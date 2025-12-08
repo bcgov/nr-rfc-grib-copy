@@ -44,4 +44,4 @@ for date in date_list:
                     RDPS_download(ymd,run_time,time_step,var_name)
         var_name = ''
         RDPS_download(ymd,run_time,'006','DownwardShortwaveRadiationFlux-Accum_Sfc')
-        RDPS_download(ymd,run_time,'006','DownwardShortwaveRadiationFlux-Accum_Sfc')
+        RDPS_download(ymd,run_time,'006','NetLongwaveRadiationFlux-Accum_Sfc')
