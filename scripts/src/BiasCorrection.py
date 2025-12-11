@@ -28,7 +28,7 @@ def objstore_to_df(objpath,onprem=False, **kwargs):
 
     return output
 
-def df_to_objstore(df, objpath, onprem=False):
+def df_to_objstore(df, objpath, onprem=False, **kwargs):
     filename = objpath.split("/")[-1]
     filetype = filename.split(".")[-1]
     if onprem:
@@ -40,9 +40,9 @@ def df_to_objstore(df, objpath, onprem=False):
         local_path = os.path.join(local_folder,filename)
     match filetype:
         case 'csv':
-            df.to_csv(local_path)
+            df.to_csv(local_path, **kwargs)
         case 'parquet':
-            df.to_parquet(local_path)
+            df.to_parquet(local_path, **kwargs)
     if not onprem:
         ostore.put_object(local_path=local_path, ostore_path=objpath)
         os.remove(local_path)
@@ -142,6 +142,69 @@ def forecast_daily_summary(grib_path, datelist, config_list_T, config_list_P, da
         daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
         df_to_objstore(All_daily,daily_summary_fpath)
 
+def forecast_daily_formatted(daily_summary_path, output_path):
+    daily_summary_fpath = os.path.join(daily_summary_path,date.strftime("%Y%m%d.csv"))
+    daily_summary = objstore_to_df(daily_summary_fpath)
+    value_cols = daily_summary.columns[2:]
+    daily_summary.loc[daily_summary['Variable']=='PC', 'Variable'] = 'PP'
+    daily_summary_pivot = daily_summary.pivot(
+        index = 'Date',
+        columns = 'Variable',
+        values = value_cols.to_list()
+    )
+    daily_summary_pivot = daily_summary_pivot.reindex(['TX','TN','PP'],axis=1,level='Variable')
+    daily_summary_pivot.columns = [f'{col[0]}-{col[1]}' for col in daily_summary_pivot.columns]
+    daily_summary_pivot.insert(loc=0, column='DATE', value=daily_summary_pivot.index)
+
+    output_fpath = os.path.join(output_path,date.strftime("%Y%m%d"),"CLIMATE_FOR.xlsx")
+    local_folder = 'raw_data/temp_file'
+    if not os.path.exists(local_folder):
+        os.makedirs(local_folder)
+    local_path = os.path.join(local_folder,"CLIMATE_FOR.xlsx")
+    with pd.ExcelWriter(local_path, engine='openpyxl') as writer:
+        daily_summary_pivot.to_excel(writer, sheet_name='Forecast1', index=False)
+        daily_summary_pivot.to_excel(writer, sheet_name='Forecast2', index=False)
+    ostore.put_object(local_path=local_path, ostore_path=output_fpath)
+    os.remove(local_path)
+    #df_to_objstore(daily_summary_pivot,output_fpath, index=False)
+
+
+def forecast_hourly_formatted(grib_path, date, config_list_T, config_list_P, output_path, col_names, dT):
+    today = datetime.date.today()
+    start_time = datetime.time.min
+    start_dt = datetime.datetime.combine(today, start_time)
+    end_dt = start_dt + datetime.timedelta(days=10) - datetime.timedelta(hours=1)
+
+    model_name = config_list_P[0].model_name
+    for_PC = read_forecast(date=date,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
+    for_TA = read_forecast(date=date,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
+    first_dt = for_TA.index[0]
+    new_ind = pd.date_range(start=first_dt, end=end_dt, freq='h').tolist()
+    for_TA = split_duplicates(for_TA)
+    for_TA_hourly = for_TA.reindex(new_ind)
+    for_TA_hourly = for_TA_hourly.interpolate() + dT
+    for_PC = split_duplicates(for_PC)
+    for_PC_hourly = for_PC.cumsum().reindex(new_ind)
+    for_PC_hourly = for_PC_hourly.interpolate()
+    for_PC_hourly.iloc[1:,:] = for_PC_hourly.diff().iloc[1:,:]
+    for_TA_hourly = for_TA_hourly.add_suffix('_T') #Add bias correction
+    for_PC_hourly = for_PC_hourly.add_suffix('_P') #switch to nearest neighbor, divide by 3
+
+    T_cols = [name + '-T' for name in col_names.to_list()]
+    P_cols = [name + '-P' for name in col_names.to_list()]
+    alternating_cols = [name for pair in zip(T_cols, P_cols) for name in pair]
+    combined_for = pd.concat([for_TA_hourly, for_PC_hourly], axis=1)
+    combined_for = combined_for[alternating_cols]
+    combined_for = combined_for[combined_for.index >= start_dt]
+    combined_for = combined_for.round(2)
+    combined_for.insert(loc=0, column='HOUR', value=combined_for.index.hour.to_list())
+    combined_for.insert(loc=0, column='DATE', value=combined_for.index.strftime('%Y-%m-%d').to_list())
+    combined_for.loc[combined_for["DATE"].duplicated(), "DATE"] = ''
+
+    output_fpath = os.path.join(output_path,start_dt.strftime("%Y%m%d"),"CLIMATE_FOR_HOUR.xlsx")
+    df_to_objstore(combined_for,output_fpath, index=False)
+
+
 def bias_correction(date, observed_data, daily_summary_path, daily_corrected_path):
     forecast_list = list()
     date = date.replace(hour=0,minute=0,second=0,microsecond=0)
@@ -168,6 +231,8 @@ def bias_correction(date, observed_data, daily_summary_path, daily_corrected_pat
     daily_corrected_fpath = os.path.join(daily_corrected_path,date.strftime("%Y%m%d.csv"))
     df_to_objstore(forecast_corr,daily_corrected_fpath)
     #Obs has datetime index, forecast has regular index, causing issues?
+    dT = (TX_bias + TN_bias)/2
+    return dT
 
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
@@ -194,6 +259,7 @@ col_names = observed_data.columns
 ifs_grib_path = "ecmwf/ifs00Z_summary"
 ifs_daily_summary_path = 'ClimateFOR/ecmwf_ifs00Z/daily_forecast_summary/'
 ifs_daily_corrected_path = 'ClimateFOR/ecmwf_ifs00Z/daily_corrected_summary/'
+ifs_clever_input_path = 'ClimateFOR/ecmwf_ifs00Z/CLEVER_hourly/'
 config_IFS_P = [GetGribConfig.GribECMWF2()]
 config_IFS_T = [GetGribConfig.GribECMWF1()]
 
@@ -206,8 +272,9 @@ else:
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 
-forecast_daily_summary(ifs_grib_path, datelist, config_IFS_T, config_IFS_P, ifs_daily_summary_path, col_names)
-bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
+dT = bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
+forecast_daily_formatted(ifs_daily_corrected_path, ifs_clever_input_path)
+forecast_hourly_formatted(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_clever_input_path, col_names, dT)
 
 aifs_grib_path = "ecmwf/aifs00Z_summary"
 aifs_daily_summary_path = 'ClimateFOR/ecmwf_aifs00Z/daily_forecast_summary/'
