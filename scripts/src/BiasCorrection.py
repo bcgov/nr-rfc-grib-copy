@@ -187,8 +187,8 @@ def forecast_hourly_formatted(grib_path, date, config_list_T, config_list_P, out
     for_PC_hourly = for_PC.cumsum().reindex(new_ind)
     for_PC_hourly = for_PC_hourly.interpolate()
     for_PC_hourly.iloc[1:,:] = for_PC_hourly.diff().iloc[1:,:]
-    for_TA_hourly = for_TA_hourly.add_suffix('_T') #Add bias correction
-    for_PC_hourly = for_PC_hourly.add_suffix('_P') #switch to nearest neighbor, divide by 3
+    for_TA_hourly = for_TA_hourly.add_suffix('-T') #Add bias correction
+    for_PC_hourly = for_PC_hourly.add_suffix('-P') #switch to nearest neighbor, divide by 3
 
     T_cols = [name + '-T' for name in col_names.to_list()]
     P_cols = [name + '-P' for name in col_names.to_list()]
@@ -201,7 +201,7 @@ def forecast_hourly_formatted(grib_path, date, config_list_T, config_list_P, out
     combined_for.insert(loc=0, column='DATE', value=combined_for.index.strftime('%Y-%m-%d').to_list())
     combined_for.loc[combined_for["DATE"].duplicated(), "DATE"] = ''
 
-    output_fpath = os.path.join(output_path,start_dt.strftime("%Y%m%d"),"CLIMATE_FOR_HOUR.xlsx")
+    output_fpath = os.path.join(output_path,start_dt.strftime("%Y%m%d"),"CLIMATE_FOR_HOUR.csv")
     df_to_objstore(combined_for,output_fpath, index=False)
 
 
