@@ -272,6 +272,7 @@ else:
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 
+forecast_daily_summary(ifs_grib_path, datelist, config_IFS_T, config_IFS_P, ifs_daily_summary_path, col_names)
 dT = bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
 forecast_daily_formatted(ifs_daily_corrected_path, ifs_clever_input_path)
 forecast_hourly_formatted(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_clever_input_path, col_names, dT)
