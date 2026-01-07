@@ -234,24 +234,32 @@ def bias_correction(date, observed_data, daily_summary_path, daily_corrected_pat
     dT = (TX_bias + TN_bias)/2
     return dT
 
+def read_climateOBS(year_list):
+    observed_data = list()
+    for year in year_list:
+        ClimateObs_path = f"models/data/climate_obs/ClimateDataOBS_{year}.xlsm"
+        ostore.get_object(ClimateObs_path,ClimateObs_path)
+        ClimateObs = pd.read_excel(ClimateObs_path,sheet_name="ALL_DATA",index_col="DATE")
+
+        OBS = list()
+        #List of variables in ClimateOBS:
+        var_list = ["TX","TN","PP"]
+        #Loop through each variable:
+        for var in var_list:
+            OBS.append(ClimateObs.filter(regex=f'-{var}').rename(columns = lambda x: x[0:3]))
+        observed_data.append(pd.concat(OBS,keys = var_list))
+        del OBS[:]
+    output = pd.concat(observed_data) if len(observed_data)>1 else observed_data[0]
+
+    return output
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
-
-ClimateObs_path = "models/data/climate_obs/ClimateDataOBS_2025.xlsm"
-
-ostore.get_object(ClimateObs_path,ClimateObs_path)
-ClimateObs = pd.read_excel(ClimateObs_path,sheet_name="ALL_DATA",index_col="DATE")
-
-OBS = list()
-#List of variables in ClimateOBS:
-var_list = ["TX","TN","PP"]
-#Loop through each variable:
-for var in var_list:
-    OBS.append(ClimateObs.filter(regex=f'-{var}').rename(columns = lambda x: x[0:3]))
-observed_data = pd.concat(OBS,keys = var_list)
-del OBS[:]
+max_days_back = 6
 
 date = datetime.datetime.now()
+year_list = set(pd.date_range(end=date, periods=max_days_back).strftime("%Y"))
+observed_data = read_climateOBS(year_list)
+
 col_names = observed_data.columns
 
 #grib_path = "cmc/summary_V2024"
@@ -265,10 +273,7 @@ config_IFS_T = [GetGribConfig.GribECMWF1()]
 
 obj_summary_list = ostore.list_objects(ifs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-if len(summary_dates)>0:
-    days_back = min(abs((max(summary_dates) - date).days),6)
-else:
-    days_back = 6
+days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 
@@ -285,10 +290,8 @@ config_AIFS_T = [GetGribConfig.GribECMWF3()]
 
 obj_summary_list = ostore.list_objects(aifs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-if len(summary_dates)>0:
-    days_back = min(abs((max(summary_dates) - date).days),6)
-else:
-    days_back = 6
+days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 forecast_daily_summary(aifs_grib_path, datelist, config_AIFS_T, config_AIFS_P, aifs_daily_summary_path, col_names)
@@ -303,10 +306,8 @@ config_GFS_T = [GetGribConfig.GribGFS1()]
 
 obj_summary_list = ostore.list_objects(gfs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-if len(summary_dates)>0:
-    days_back = min(abs((max(summary_dates) - date).days),6)
-else:
-    days_back = 6
+days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 forecast_daily_summary(gfs_grib_path, datelist, config_GFS_T, config_GFS_P, gfs_daily_summary_path, col_names)
