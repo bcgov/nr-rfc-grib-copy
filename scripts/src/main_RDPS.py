@@ -13,7 +13,7 @@ var_list = ['Albedo_Sfc','AirTemp_AGL-2m','Pressure_Sfc','WindU_AGL-10m','WindV_
 
 #Get current date:
 today = datetime.datetime.now()
-date_list = [today, today-datetime.timedelta(days=1)]
+date_list = [today, today-datetime.timedelta(days=1),today-datetime.timedelta(days=2)]
 
 
 
