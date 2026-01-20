@@ -101,6 +101,16 @@ def delete_all_non_current_version(ostore_path):
             }
         )
 
+def ERA5_snow_year_download(year):
+    month_list = [str(num+1).zfill(2) for num in range(12)]
+    request_update = {
+        "variable": ["snow_depth"],
+        "year": [year],
+        "month": month_list,
+    }
+    filename = f"ERA5_snow_depth_{year}.nc"
+    ERA5_download(request_update, filename)
+
 #Download data to path specified:
 file_name = 'ERA5_u10_2025-11.nc'
 
@@ -123,13 +133,16 @@ variable_dict = {
 vars_to_sum = ["p","net_solor_radiation","net_thermal_radiation"]
 
 #Get current date:
-date = datetime.datetime.now()
-day = int(date.strftime("%d"))
+today = datetime.datetime.now()
+date = today
+day = int(today.strftime("%d"))
 #If day of month <= 5, download previous month instead of current month
 if day <= 5:
     date = date - datetime.timedelta(days=7)
 #Create list of dates (months) to download. Two most recent months
 datelist = [date, date - datetime.timedelta(days=31)]
+
+
 
 for key, value in variable_dict.items():
     for date in datelist:
@@ -144,20 +157,29 @@ for key, value in variable_dict.items():
             request_update.update({"daily_statistic": "daily_sum"})
         #Construct filename from key (variable name) and date:
         filename = f"ERA5_{key}_{year}-{month}.nc"
-        ERA5_download(request_update, filename)
+        #ERA5_download(request_update, filename)
 
 #Only update whole year data on Mondays:
 if datelist[0].weekday() == 0:
-    for key, value in variable_dict.items():
-        year = date.strftime("%Y")
-        month_list = [str(num+1).zfill(2) for num in range(12)]
-        request_update = {
-            "variable": [value],
-            "year": year,
-            "month": month_list,
-        }
-        if key in vars_to_sum:
-            request_update.update({"daily_statistic": "daily_sum"})
-        #Construct filename from key (variable name) and date:
-        filename = f"ERA5_{key}_{year}.nc"
-        ERA5_download(request_update, filename)
+    yearlist = set([date.strftime("%Y") for date in datelist])
+    for year in yearlist:
+        for key, value in variable_dict.items():
+            if year == today.strftime("%Y"):
+                max_month = today.month
+            else:
+                max_month = 12
+            month_list = [str(num+1).zfill(2) for num in range(max_month)]
+            request_update = {
+                "variable": [value],
+                "year": year,
+                "month": month_list,
+            }
+            if key in vars_to_sum:
+                request_update.update({"daily_statistic": "daily_sum"})
+            #Construct filename from key (variable name) and date:
+            filename = f"ERA5_{key}_{year}.nc"
+            ERA5_download(request_update, filename)
+
+# year_list = []
+# for year in year_list:
+#     ERA5_snow_year_download(year)
