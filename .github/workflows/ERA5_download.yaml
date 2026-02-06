@@ -1,9 +1,9 @@
 name: ERA5 Download
 
 on:
-  push:
-    branches:
-      - "main"
+  # push:
+  #   branches:
+  #     - "main"
   # cron schedules are in UTC
   # running at 6 am pst, which translates to 2 pm utc.
   schedule:

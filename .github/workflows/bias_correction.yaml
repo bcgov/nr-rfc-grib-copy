@@ -1,9 +1,9 @@
 name: Bias Correction
 
 on:
-  push:
-    branches:
-      - "main"
+  # push:
+  #   branches:
+  #     - "main"
   # cron schedules are in UTC
   # this job should run at 9 am pst, which translates to 5 pm.
   schedule:
