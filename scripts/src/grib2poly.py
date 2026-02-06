@@ -202,7 +202,8 @@ CLEVER_aifs_objpath = os.path.join('ecmwf/aifs00Z_CleverBasinsSummary',f'{dt_tex
 CLEVER_gfs_objpath = os.path.join('NWP/gfs00Z_CleverBasinsSummary',f'{dt_text}.csv')
 COFFEE_obj_path = os.path.join('cmc/COFFEEBasinsSummary',f'{dt_text}.csv')
 
-
+if not os.path.exists('raw_data'):
+    os.makedirs('raw_data')
 
 """ ostore_objs = ostore.list_objects(objpath,return_file_names_only=True)
 file_list = list()
@@ -299,7 +300,7 @@ for dt in importdates:
         ostore.put_object(local_path=local_filename, ostore_path=obj_path)
         os.remove(local_filename)
 
-year = current_date.strftime('%Y')
+year = (current_date - datetime.timedelta(days=1)).strftime('%Y')
 
 RDPA_Summary_objfolder = 'RFC_DATA/RDPA/Summary'
 COFFEE_summary_fpath = os.path.join(RDPA_Summary_objfolder,f'COFFEE_Summary_{year}.csv')

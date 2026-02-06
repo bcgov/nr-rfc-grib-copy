@@ -1,9 +1,9 @@
 name: Compute ECDFs of Basin Elevations
 
 on:
-  push:
-    branches:
-      - "main"
+  # push:
+  #   branches:
+  #     - "main"
   # cron schedules are in UTC
   # this job should run at 7:30 am pst, which translates to 2:30 pm UTC.
   workflow_dispatch:

@@ -20,13 +20,15 @@ import geopandas
 # snow_basins_shp = geopandas.read_file(feature_geojson)
 snowbasins_shp_path = 'data/shape/SnowBasins/Snow_Basins_Indexes.shp'
 snow_basins_shp = geopandas.read_file(snowbasins_shp_path)
-snow_basins_shp = snow_basins_shp.to_crs("EPSG:3979")
+#snow_basins_shp = snow_basins_shp.to_crs("EPSG:3979")
+snow_basins_shp = snow_basins_shp.to_crs("EPSG:3005")
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
 clever_shp_path = 'data/shape/CLEVER/CLEVER_BASINS.shp'
 clever_shp = geopandas.read_file(clever_shp_path)
 clever_shp = clever_shp.to_crs("EPSG:3979")
-cog_path = "https://datacube-prod-data-public.s3.ca-central-1.amazonaws.com/store/elevation/mrdem/mrdem-30/mrdem-30-dtm.tif"
+#cog_path = "https://datacube-prod-data-public.s3.ca-central-1.amazonaws.com/store/elevation/mrdem/mrdem-30/mrdem-30-dtm.tif"
+cog_path = "data/DEM/mrdem-30-dtm-bc.tif"
 
 def ecdf(a):
     x, counts = np.unique(a, return_counts=True)
@@ -46,9 +48,9 @@ def elevation_ecdf(shapes, names_col, obj_dir):
                         #window = src.window(min_x, min_y, max_x, max_y)
                         #raster_data = src.read(window=window)
                         raster_data=rasterio.mask.mask(src,[vector],crop=True)
-
-                raster_data = raster_data.astype(int)
+                raster_data = raster_data[0] #For 'data/shape/SnowBasins/Snow_Basins_Indexes.shp'
                 elevation_data = raster_data[raster_data>=0]
+                elevation_data = elevation_data.astype(int)
                 elevation_data = 10*np.round(elevation_data/10).astype(int)
                 x, cdf = ecdf(elevation_data)
 
