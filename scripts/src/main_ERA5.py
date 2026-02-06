@@ -157,7 +157,7 @@ for key, value in variable_dict.items():
             request_update.update({"daily_statistic": "daily_sum"})
         #Construct filename from key (variable name) and date:
         filename = f"ERA5_{key}_{year}-{month}.nc"
-        #ERA5_download(request_update, filename)
+        ERA5_download(request_update, filename)
 
 #Only update whole year data on Mondays:
 if datelist[0].weekday() == 0:
