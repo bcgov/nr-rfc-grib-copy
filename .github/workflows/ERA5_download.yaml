@@ -7,7 +7,7 @@ on:
   # cron schedules are in UTC
   # running at 6 am pst, which translates to 2 pm utc.
   schedule:
-    - cron: '00 14 * * 1,2'
+    - cron: '30 15 * * 0-2'
   workflow_dispatch:
   repository_dispatch:
     types: run-era5-download
