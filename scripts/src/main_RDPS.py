@@ -1,4 +1,5 @@
 import requests
+import pandas as pd
 import os
 import datetime
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
@@ -45,3 +46,24 @@ for date in date_list:
         var_name = ''
         RDPS_download(ymd,run_time,'006','DownwardShortwaveRadiationFlux-Accum_Sfc')
         RDPS_download(ymd,run_time,'006','NetLongwaveRadiationFlux-Accum_Sfc')
+
+
+#importdates = pd.date_range(start = '20240615', end = '20240730')
+
+RDPA_objfolder = os.path.join('RFC_DATA','RDPA')
+ostore_objs = ostore.list_objects(RDPA_objfolder,return_file_names_only=True)
+url_template = 'https://hpfx.collab.science.gc.ca/{dt_text}/WXO-DD/model_rdpa/10km/06/{dt_text}T06Z_MSC_RDPA_APCP-Accum24h_Sfc_RLatLon0.09_PT0H.grib2'
+for dt in date_list:
+    dt_text = dt.strftime('%Y%m%d')
+    url = url_template.format(dt_text=dt_text)
+    filename = url.split('/')[-1]
+    local_filename = os.path.join('raw_data',filename)
+    obj_path = os.path.join(RDPA_objfolder,filename)
+    if obj_path not in ostore_objs:
+        with requests.get(url, stream=True) as r:
+            if r.status_code == requests.codes.ok:
+                with open(local_filename, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+        ostore.put_object(local_path=local_filename, ostore_path=obj_path)
+        os.remove(local_filename)
