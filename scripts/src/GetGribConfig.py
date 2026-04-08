@@ -238,12 +238,10 @@ class GribRegional_2(GribConfig):
 class GribGlobal_1(GribConfig):
     model_number = "00"
     iteratorlist = list(range(90,241,3))
-    file_template = "CMC_glb_PRATE_SFC_0_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
+    file_template = "{datestr}T{model_number}Z_MSC_GDPS_PrecipRate_Sfc_LatLon0.15_PT{iterator}H.grib2"
     url_template = (
-        "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+        #"https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+        "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gdps/15km/{model_number}/{iterator}"
     )
     amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
     date_str_format = "%Y%m%d"
@@ -255,12 +253,10 @@ class GribGlobal_2(GribConfig):
     model_number = "00"
     iteratorlist = list(range(90,241,3))
     iteratorlist.extend(list(range(6, 16, 3))) # these are added on and used in model for bias correction
-    file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
+    file_template = "{datestr}T{model_number}Z_MSC_GDPS_AirTemp_AGL-2m_LatLon0.15_PT{iterator}H.grib2"
     url_template = (
-        "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+        #"https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
+        "https://hpfx.collab.science.gc.ca/{datestr}/WXO-DD/model_gdps/15km/{model_number}/{iterator}"
     )
     amqp_topic_pattern = 'v02.post.*.WXO-DD.model_gem_global.15km.grib2.lat_lon.*.*.#'
     date_str_format = "%Y%m%d"
@@ -272,11 +268,7 @@ class GribECMWF1(GribConfig):
     model_number = "00"
     iteratorlist = list(range(0,147,3))
     iteratorlist.extend(list(range(144,246,6))) # these are added on and used in model for bias correction
-    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     file_template = 'ECMWFifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
     url_template = (
         "ecmwf"
     )
@@ -292,11 +284,7 @@ class GribECMWF2(GribConfig):
     model_number = "00"
     iteratorlist = list(range(0,147,3))
     iteratorlist.extend(list(range(144,246,6))) # these are added on and used in model for bias correction
-    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     file_template = 'ECMWFifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
     url_template = (
         "ecmwf"
     )
@@ -311,11 +299,7 @@ class GribECMWF3(GribConfig):
 
     model_number = "00"
     iteratorlist = list(range(0,246,6))
-    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     file_template = 'ECMWFaifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
     url_template = (
         "ecmwf"
     )
@@ -330,11 +314,7 @@ class GribECMWF4(GribConfig):
 
     model_number = "00"
     iteratorlist = list(range(0,246,6))
-    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     file_template = 'ECMWFaifs{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
     url_template = (
         "ecmwf"
     )
@@ -349,11 +329,7 @@ class GribGFS1(GribConfig):
 
     model_number = "00"
     iteratorlist = list(range(0,246,3))
-    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     file_template = 'GFS{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
     url_template = (
         "https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{datestr}/{model_number}/atmos/gfs.t{model_number}z.pgrb2.0p25.f{iterator}"
     )
@@ -369,11 +345,7 @@ class GribGFS2(GribConfig):
 
     model_number = "00"
     iteratorlist = list(range(0,246,3))
-    #file_template = "CMC_glb_TMP_TGL_2_latlon.15x.15_{datestr}{model_number}_P{iterator}.grib2"
     file_template = 'GFS{model_number}Z_{var}_{datestr}_H{iterator}.grib2'
-    # url_template = (
-    #     "https://dd.weather.gc.ca/model_gem_global/15km/grib2/lat_lon/{model_number}/{iterator}"
-    # )
     url_template = (
         "https://noaa-gfs-bdp-pds.s3.amazonaws.com/gfs.{datestr}/{model_number}/atmos/gfs.t{model_number}z.pgrb2.0p25.f{iterator}"
     )
