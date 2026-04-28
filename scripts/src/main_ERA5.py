@@ -143,7 +143,7 @@ if day <= 5:
 datelist = [date, date - datetime.timedelta(days=31)]
 
 
-if datelist[0].weekday() != 6:
+if datelist[0].weekday() >= 0:
     for date in datelist:
         for key, value in variable_dict.items():
             year = date.strftime("%Y")
@@ -159,7 +159,7 @@ if datelist[0].weekday() != 6:
             filename = f"ERA5_{key}_{year}-{month}.nc"
             ERA5_download(request_update, filename)
 
-#Only update whole year data on Mondays:
+#Only update whole year data on Sundays:
 if datelist[0].weekday() == 6:
     yearlist = set([date.strftime("%Y") for date in datelist])
     for year in yearlist:
