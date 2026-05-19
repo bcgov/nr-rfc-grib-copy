@@ -142,6 +142,10 @@ if day <= 5:
 #Create list of dates (months) to download. Two most recent months
 datelist = [date, date - datetime.timedelta(days=31)]
 
+if today.hour < 19:
+    datelist = [date]
+else:
+    datelist = [date - datetime.timedelta(days=31)]
 
 if datelist[0].weekday() >= 0:
     for date in datelist:
@@ -160,7 +164,7 @@ if datelist[0].weekday() >= 0:
             ERA5_download(request_update, filename)
 
 #Only update whole year data on Sundays:
-if datelist[0].weekday() == 6:
+if datelist[0].weekday() == 6 and today.hour < 19:
     yearlist = set([date.strftime("%Y") for date in datelist])
     for year in yearlist:
         for key, value in variable_dict.items():
