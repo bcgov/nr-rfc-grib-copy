@@ -4,6 +4,8 @@ import NRUtil.NRObjStoreUtil as NRObjStoreUtil
 import pandas as pd
 import GetGribConfig
 
+import requests
+import jwt
 
 def objstore_to_df(objpath,onprem=False, **kwargs):
     filename = objpath.split("/")[-1]
@@ -84,7 +86,7 @@ def read_forecast(date, config_list, grib_path, col_names, model_name):
         combined_data[column] = combined_data[column].str.extract('val=(.*)')[0].str.split(":",expand=True)[0].astype(float)
 
     combined_data.index = dt_ind
-    combined_data.index = combined_data.index - datetime.timedelta(hours=8)
+    combined_data.index = combined_data.index - datetime.timedelta(hours=7)
     combined_data.columns = col_names
 
     match extract_code:
@@ -253,10 +255,68 @@ def read_climateOBS(year_list):
 
     return output
 
+def forecast_to_db(grib_path, date, config_list_T, config_list_P, col_names, modelname, dT=0):
+    today = date
+    start_time = datetime.time.min
+    start_dt = datetime.datetime.combine(today, start_time)
+    end_dt = start_dt + datetime.timedelta(days=10) - datetime.timedelta(hours=1)
+
+    model_name = config_list_P[0].model_name
+    for_PC = read_forecast(date=date,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
+    for_TA = read_forecast(date=date,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
+    first_dt = for_TA.index[0]
+    new_ind = pd.date_range(start=first_dt, end=end_dt, freq='h').tolist()
+    for_TA = split_duplicates(for_TA)
+    for_TA_hourly = for_TA.reindex(new_ind)
+    for_TA_hourly = for_TA_hourly.interpolate() + dT
+    for_PC = split_duplicates(for_PC)
+    for_PC_hourly = for_PC.cumsum().reindex(new_ind)
+    for_PC_hourly = for_PC_hourly.interpolate()
+    for_PC_hourly.iloc[1:,:] = for_PC_hourly.diff().iloc[1:,:]
+
+
+    for_PC_long = for_PC_hourly.reset_index(names='datetime').melt(id_vars=['datetime'], var_name='rfc_id',value_name='pc')
+    for_TA_long = for_TA_hourly.reset_index(names='datetime').melt(id_vars=['datetime'], var_name='rfc_id',value_name='ta')
+    output= for_TA_long.merge(for_PC_long, on=['datetime','rfc_id'])
+
+    start_dt = date.replace(hour=0,minute=0,second=0,microsecond=0) + datetime.timedelta(hours=int(config_list_T[0].model_number))
+    start_dt = start_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    output['datetime'] = output['datetime'] + datetime.timedelta(hours=7)
+    output['datetime'] = output['datetime'].dt.tz_localize('UTC')
+    output['datetime'] = output['datetime'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+    output['runtime'] = start_dt
+    output['model'] = modelname
+    return output
+
+def post_data(payload, url, schema, token):
+    headers = {
+        "Content-Type": "application/json",
+        "Content-Profile": schema,  # Specify the 'data' schema for the insert
+        "Prefer": "resolution=merge-duplicates", # This enables UPSERT logic
+        "Authorization": f"Bearer {token}"
+    }
+    chunk_size = 10000
+    chunked_list = [payload[i:i + chunk_size] for i in range(0, len(payload), chunk_size)]
+    for chunk in chunked_list:
+        response = requests.post(url, json=chunk, headers=headers)
+        if response.status_code == 201:
+            print("Success: Data inserted.")
+        else:
+            print(f"Error {response.status_code}: {response.text}")
+
+def generate_token(role="web_user"):
+    payload = {
+        "role": role,
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
+        "iat": datetime.datetime.now(datetime.UTC)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+
 ostore = NRObjStoreUtil.ObjectStoreUtil()
 max_days_back = 6
 
-date = datetime.datetime.now()
+date = datetime.datetime.now() - datetime.timedelta(days=0)
 year_list = set(pd.date_range(end=date, periods=max_days_back).strftime("%Y"))
 observed_data = read_climateOBS(year_list)
 
@@ -276,15 +336,21 @@ summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(ob
 days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
-
 forecast_daily_summary(ifs_grib_path, datelist, config_IFS_T, config_IFS_P, ifs_daily_summary_path, col_names)
-dT = bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
+ifs_dT = bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
+#payload = forecast_to_db(ifs_grib_path, date, config_IFS_T, config_IFS_P, col_names, modelname='ifs', dT=ifs_dT)
 forecast_daily_formatted(ifs_daily_corrected_path, ifs_clever_input_path)
-forecast_hourly_formatted(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_clever_input_path, col_names, dT)
+forecast_hourly_formatted(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_clever_input_path, col_names, ifs_dT)
+
+# JWT_SECRET = os.getenv("JWT_SECRET")
+# token = generate_token()
+# payload_dict = payload.to_dict(orient='records')
+# post_data(payload_dict, url="https://rfc-db.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
 
 aifs_grib_path = "ecmwf/aifs00Z_summary"
 aifs_daily_summary_path = 'ClimateFOR/ecmwf_aifs00Z/daily_forecast_summary/'
 aifs_daily_corrected_path = 'ClimateFOR/ecmwf_aifs00Z/daily_corrected_summary/'
+aifs_clever_input_path = 'ClimateFOR/ecmwf_aifs00Z/CLEVER_hourly/'
 config_AIFS_P = [GetGribConfig.GribECMWF4()]
 config_AIFS_T = [GetGribConfig.GribECMWF3()]
 
@@ -295,12 +361,15 @@ days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summ
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 forecast_daily_summary(aifs_grib_path, datelist, config_AIFS_T, config_AIFS_P, aifs_daily_summary_path, col_names)
-bias_correction(date, observed_data, aifs_daily_summary_path, aifs_daily_corrected_path)
+aifs_dT = bias_correction(date, observed_data, aifs_daily_summary_path, aifs_daily_corrected_path)
+forecast_daily_formatted(aifs_daily_corrected_path, aifs_clever_input_path)
+forecast_hourly_formatted(aifs_grib_path, date, config_AIFS_T, config_AIFS_P, aifs_clever_input_path, col_names, aifs_dT)
 
 
 gfs_grib_path = "NWP/gfs00Z_summary"
 gfs_daily_summary_path = 'ClimateFOR/gfs00Z/daily_forecast_summary/'
 gfs_daily_corrected_path = 'ClimateFOR/gfs00Z/daily_corrected_summary/'
+gfs_clever_input_path = 'ClimateFOR/gfs00Z/CLEVER_hourly/'
 config_GFS_P = [GetGribConfig.GribGFS2()]
 config_GFS_T = [GetGribConfig.GribGFS1()]
 
@@ -311,7 +380,9 @@ days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summ
 
 datelist = pd.date_range(end=date, periods=days_back).tolist()
 forecast_daily_summary(gfs_grib_path, datelist, config_GFS_T, config_GFS_P, gfs_daily_summary_path, col_names)
-bias_correction(date, observed_data, gfs_daily_summary_path, gfs_daily_corrected_path)
+gfs_dT = bias_correction(date, observed_data, gfs_daily_summary_path, gfs_daily_corrected_path)
+forecast_daily_formatted(gfs_daily_corrected_path, gfs_clever_input_path)
+forecast_hourly_formatted(gfs_grib_path, date, config_GFS_T, config_GFS_P, gfs_clever_input_path, col_names, gfs_dT)
 
 #Save daily forecast summaries as csv files
 #Check dates with grib files available vs csv summaries. Produce csv summaries for for all dates with data available
