@@ -142,10 +142,10 @@ if day <= 5:
 #Create list of dates (months) to download. Two most recent months
 datelist = [date, date - datetime.timedelta(days=31)]
 
-if today.hour < 19:
-    datelist = [date]
-else:
-    datelist = [date - datetime.timedelta(days=31)]
+# if today.hour < 19:
+#     datelist = [date]
+# else:
+#     datelist = [date - datetime.timedelta(days=31)]
 
 if datelist[0].weekday() >= 0:
     for date in datelist:
