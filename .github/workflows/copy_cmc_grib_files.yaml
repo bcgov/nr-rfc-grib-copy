@@ -71,8 +71,8 @@ jobs:
         # Use Manual UI input if typed; otherwise, fall back to the original run date
         TARGET_DATE="${MANUAL_DATE:-$FALLBACK_DATE}"
 
-        # Sanitize formatting to strip any accidental dashes, slashes, or spaces
-        TARGET_DATE=$(echo "$TARGET_DATE" | tr -d '-/ ')
+        # FIX: Put the dash at the very end of the set so tr knows it is a literal character, not a range
+        TARGET_DATE=$(echo "$TARGET_DATE" | tr -d '/ -')
 
         echo "Processing target date: $TARGET_DATE"
 
