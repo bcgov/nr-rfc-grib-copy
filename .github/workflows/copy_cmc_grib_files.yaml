@@ -56,9 +56,25 @@ jobs:
       name: download grib files
       shell: bash
       env:
-        DATESTR: ${{ github.event.client_payload.idem_key }}
+        MANUAL_DATE: ${{ github.event.inputs.manual_date }}
+        RUN_STARTED: ${{ github.run_started_at }}
+        PAYLOAD_DATE: ${{ github.event.client_payload.idem_key }}
       run: |
-        python scripts/src/main_cmc.py $DATESTR
+        # 1. Check if a manual date was typed into the UI
+        if [ -n "$MANUAL_DATE" ]; then
+          TARGET_DATE="$MANUAL_DATE"
+          echo "Using manually entered date: $TARGET_DATE"
+
+        # 2. Fall back to your automated client_payload API key if present
+        elif [ -n "$PAYLOAD_DATE" ]; then
+          TARGET_DATE="$PAYLOAD_DATE"
+          echo "Using payload date: $TARGET_DATE"
+
+        # 3. If re-running a failed job, use the original run's date
+        else
+          TARGET_DATE=$(echo "${RUN_STARTED:0:10}" | tr -d '-')
+          echo "Using run started date: $TARGET_DATE"
+        python scripts/src/main_cmc.py "$TARGET_DATE"
 
     # - id: debug
     #   name: debug and list files
