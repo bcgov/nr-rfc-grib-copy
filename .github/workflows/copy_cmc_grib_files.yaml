@@ -9,6 +9,11 @@ on:
   schedule:
     - cron: '45 12 * * *'
   workflow_dispatch:
+    inputs:
+      manual_date:
+        description: 'Target Date (Format: YYYYMMDD). Leave blank for today.'
+        required: false
+        default: ''
   repository_dispatch:
     types: run-cmc-grib-download
 
