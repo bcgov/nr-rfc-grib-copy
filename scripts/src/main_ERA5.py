@@ -1,5 +1,6 @@
 from ecmwf.datastores import Client
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
+from botocore.exceptions import ClientError
 import datetime
 import os
 
@@ -40,16 +41,44 @@ def ERA5_download(request_update, filename):
     objpath = os.path.join(objfolder,filename)
     file_path = os.path.join(download_folder,filename)
 
-    request.update(request_update)
-    client.retrieve(dataset, request, file_path)
+    should_download = False
+    #Check if file already exists in object store:
+    try:
+        # 1. Check if the file exists and get its metadata
+        response = s3.head_object(Bucket=bucket, Key=objpath)
+        last_modified = response['LastModified']
 
-    #Copy file to objectstore:
-    ostore.put_object(local_path=file_path,ostore_path=objpath)
+        # 2. Calculate file age in UTC
+        current_time = datetime.datetime.now(datetime.timezone.utc)
+        file_age = current_time - last_modified
 
-    #Delete local version of file:
-    os.remove(file_path)
-    #Delete previous (non current) versions of file on objectstore:
-    delete_all_non_current_version(objpath)
+        # 3. Check if it is older than 12 hours
+        if file_age > datetime.timedelta(hours=12):
+            print(f"File exists but is stale ({file_age.total_seconds() / 3600:.1f} hours old).")
+            should_download = True
+        else:
+            print(f"File is fresh ({file_age.total_seconds() / 3600:.1f} hours old). No download needed.")
+
+    except ClientError as e:
+        # 4. Handle missing file
+        if e.response['Error']['Code'] == '404':
+            print("File does not exist in S3. Triggering download.")
+            should_download = True
+        else:
+            print(f"AWS Error checking file: {e}")
+            raise
+
+    if should_download:
+        request.update(request_update)
+        client.retrieve(dataset, request, file_path)
+
+        #Copy file to objectstore:
+        ostore.put_object(local_path=file_path,ostore_path=objpath)
+
+        #Delete local version of file:
+        os.remove(file_path)
+        #Delete previous (non current) versions of file on objectstore:
+        delete_all_non_current_version(objpath)
 
 def delete_all_non_current_version(ostore_path):
     """
@@ -65,8 +94,8 @@ def delete_all_non_current_version(ostore_path):
 
     keys = ["Versions", "DeleteMarkers"]
     bucket = ostore.obj_store_bucket
-    ostore.createBotoClient()
-    s3 = ostore.boto_client
+    # ostore.createBotoClient()
+    # s3 = ostore.boto_client
 
     while True:
         response = s3.list_object_versions(Bucket=bucket, Prefix=ostore_path)
@@ -115,6 +144,9 @@ def ERA5_snow_year_download(year):
 file_name = 'ERA5_u10_2025-11.nc'
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
+ostore.createBotoClient()
+s3 = ostore.boto_client
+bucket = ostore.obj_store_bucket
 
 #Dictionary of ERA5 variables to download
 #key: value
@@ -136,11 +168,11 @@ vars_to_sum = ["p","net_solor_radiation","net_thermal_radiation"]
 today = datetime.datetime.now()
 date = today
 day = int(today.strftime("%d"))
-#If day of month <= 5, download previous month instead of current month
-if day <= 5:
+#If day of month <= 6, download previous month instead of current month
+if day <= 6:
     date = date - datetime.timedelta(days=7)
 #Create list of dates (months) to download. Two most recent months
-datelist = [date, date - datetime.timedelta(days=31)]
+datelist = [date, date - datetime.timedelta(days=32)]
 
 # if today.hour < 19:
 #     datelist = [date]
