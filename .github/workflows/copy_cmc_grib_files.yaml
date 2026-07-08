@@ -67,12 +67,22 @@ jobs:
       run: |
         # Parse the original run date (YYYYMMDD) as the baseline default
         FALLBACK_DATE=$(echo "${RUN_STARTED:0:10}" | tr -d '-')
+        echo "Fallback date (from run start): $FALLBACK_DATE"
 
         # Use Manual UI input if typed; otherwise, fall back to the original run date
-        TARGET_DATE="${MANUAL_DATE:-$FALLBACK_DATE}"
+        if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$MANUAL_DATE" ]; then
+          echo "Triggered manually via UI."
+          TARGET_DATE="$MANUAL_DATE"
+        else
+          TARGET_DATE="$FALLBACK_DATE"
+        fi
 
         # FIX: Put the dash at the very end of the set so tr knows it is a literal character, not a range
         TARGET_DATE=$(echo "$TARGET_DATE" | tr -d '/ -')
+        if [ -z "$TARGET_DATE" ]; then
+          echo "Target date was left empty or invalid. Using fallback date."
+          TARGET_DATE="$FALLBACK_DATE"
+        fi
 
         echo "Processing target date: $TARGET_DATE"
 
