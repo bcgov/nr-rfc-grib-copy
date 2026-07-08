@@ -61,13 +61,23 @@ jobs:
       name: download grib files
       shell: bash
       env:
+        EVENT_NAME: ${{ github.event_name }}
         MANUAL_DATE: ${{ github.event.inputs.manual_date }}
         RUN_STARTED: ${{ github.run_started_at }}
         PAYLOAD_DATE: ${{ github.event.client_payload.idem_key }}
       run: |
-        # Parse the original run date (YYYYMMDD) as the baseline default
-        FALLBACK_DATE=$(echo "${RUN_STARTED:0:10}" | tr -d '-')
-        echo "Fallback date (from run start): $FALLBACK_DATE"
+        echo "Event Name: $EVENT_NAME"
+        echo "Manual Date Input: $MANUAL_DATE"
+        echo "Run Started At: $RUN_STARTED"
+        echo "Payload Date: $PAYLOAD_DATE"
+
+        if [ -n "$RUN_STARTED" ]; then
+          FALLBACK_DATE=$(echo "${RUN_STARTED:0:10}" | tr -d '-')
+          echo "Original workflow execution date detected: $FALLBACK_DATE"
+        else
+          FALLBACK_DATE=$(date -u +'%Y%m%d')
+          echo "No run timestamp context found. Defaulting to system UTC date: $FALLBACK_DATE"
+        fi
 
         # Use Manual UI input if typed; otherwise, fall back to the original run date
         if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$MANUAL_DATE" ]; then
