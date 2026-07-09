@@ -40,12 +40,12 @@ jobs:
         wget -c ftp://ftp.cpc.ncep.noaa.gov/wd51we/wgrib2/wgrib2.tgz
         tar -xzvf wgrib2.tgz
 
-    - id: compile wgrib2
-      name: compile the wgrib2
-      shell: bash
-      run: |
-        cd grib2
-        make
+    # - id: compile_wgrib2
+    #   name: compile the wgrib2
+    #   shell: bash
+    #   run: |
+    #     cd grib2
+    #     make
 
     - id: upload_wgrib2_artifact
       name: upload
