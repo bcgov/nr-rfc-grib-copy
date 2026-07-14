@@ -90,52 +90,99 @@ if __name__ == "__main__":
     #date_str = "20250709"
     if len(sys.argv) > 1:
         date_str = sys.argv[1]
+    dates = [(datetime.datetime.now() - datetime.timedelta(days=i)).strftime('%Y%m%d') for i in range(0, 3, 1)]
 
     cmc_configs = []
     cmc_configs.append(GetGribConfig.GribRegional_1())
     cmc_configs.append(GetGribConfig.GribRegional_2())
     cmc_configs.append(GetGribConfig.GribGlobal_1())
     cmc_configs.append(GetGribConfig.GribGlobal_2())
-    get_extract_gribs(date_str=date_str,
-                    GribConfigList=cmc_configs,
-                    grib_folder=dest_folder_gribs,
-                    summary_folder=dest_folder_summary)
-    persist_gribs_to_object_store(date_str=date_str,
-                                grib_folder=dest_folder_gribs,
-                                summary_folder=dest_folder_summary,
-                                ostore_grib_folder=ostore_folder_gribs,
-                                ostore_summary_folder=ostore_folder_summary)
+    # get_extract_gribs(date_str=date_str,
+    #                 GribConfigList=cmc_configs,
+    #                 grib_folder=dest_folder_gribs,
+    #                 summary_folder=dest_folder_summary)
+    # persist_gribs_to_object_store(date_str=date_str,
+    #                             grib_folder=dest_folder_gribs,
+    #                             summary_folder=dest_folder_summary,
+    #                             ostore_grib_folder=ostore_folder_gribs,
+    #                             ostore_summary_folder=ostore_folder_summary)
 
-    ecmwf_configs = []
-    ecmwf_configs.append(GetGribConfig.GribECMWF1())
-    ecmwf_configs.append(GetGribConfig.GribECMWF2())
-    get_extract_gribs(date_str=date_str,
-                    GribConfigList=ecmwf_configs,
-                    grib_folder='ecmwf/ifs00Z',
-                    summary_folder='ecmwf/ifs00Z_summary')
-    persist_gribs_to_object_store(date_str=date_str,
-                                grib_folder='ecmwf/ifs00Z',
-                                summary_folder='ecmwf/ifs00Z_summary')
+    ifs_configs = []
+    ifs_configs.append(GetGribConfig.GribECMWF1())
+    ifs_configs.append(GetGribConfig.GribECMWF2())
+    # get_extract_gribs(date_str=date_str,
+    #                 GribConfigList=ifs_configs,
+    #                 grib_folder='ecmwf/ifs00Z',
+    #                 summary_folder='ecmwf/ifs00Z_summary')
+    # persist_gribs_to_object_store(date_str=date_str,
+    #                             grib_folder='ecmwf/ifs00Z',
+    #                             summary_folder='ecmwf/ifs00Z_summary')
 
-    ecmwf_configs = []
-    ecmwf_configs.append(GetGribConfig.GribECMWF3())
-    ecmwf_configs.append(GetGribConfig.GribECMWF4())
-    get_extract_gribs(date_str=date_str,
-                    GribConfigList=ecmwf_configs,
-                    grib_folder='ecmwf/aifs00Z',
-                    summary_folder='ecmwf/aifs00Z_summary')
-    persist_gribs_to_object_store(date_str=date_str,
-                                grib_folder='ecmwf/aifs00Z',
-                                summary_folder='ecmwf/aifs00Z_summary')
+    aifs_configs = []
+    aifs_configs.append(GetGribConfig.GribECMWF3())
+    aifs_configs.append(GetGribConfig.GribECMWF4())
+    # get_extract_gribs(date_str=date_str,
+    #                 GribConfigList=aifs_configs,
+    #                 grib_folder='ecmwf/aifs00Z',
+    #                 summary_folder='ecmwf/aifs00Z_summary')
+    # persist_gribs_to_object_store(date_str=date_str,
+    #                             grib_folder='ecmwf/aifs00Z',
+    #                             summary_folder='ecmwf/aifs00Z_summary')
     #get_extract_gribs(date_str=date_str)
     #persist_gribs_to_object_store(date_str=date_str)
     gfs_configs = []
     gfs_configs.append(GetGribConfig.GribGFS1())
     gfs_configs.append(GetGribConfig.GribGFS2())
-    get_extract_gribs(date_str=date_str,
-                    GribConfigList=gfs_configs,
-                    grib_folder='NWP/gfs00Z',
-                    summary_folder='NWP/gfs00Z_summary')
-    persist_gribs_to_object_store(date_str=date_str,
-                                grib_folder='NWP/gfs00Z',
-                                summary_folder='NWP/gfs00Z_summary')
+    # get_extract_gribs(date_str=date_str,
+    #                 GribConfigList=gfs_configs,
+    #                 grib_folder='NWP/gfs00Z',
+    #                 summary_folder='NWP/gfs00Z_summary')
+    # persist_gribs_to_object_store(date_str=date_str,
+    #                             grib_folder='NWP/gfs00Z',
+    #                             summary_folder='NWP/gfs00Z_summary')
+
+    model_download_params = [{
+        "configs": cmc_configs,
+        "grib_folder": dest_folder_gribs,
+        "summary_folder": dest_folder_summary,
+        "ostore_grib_folder": ostore_folder_gribs,
+        "ostore_summary_folder": ostore_folder_summary
+    },
+    {
+        "configs": ifs_configs,
+        "grib_folder": 'ecmwf/ifs00Z',
+        "summary_folder": 'ecmwf/ifs00Z_summary',
+        "ostore_grib_folder": 'ecmwf/ifs00Z',
+        "ostore_summary_folder": 'ecmwf/ifs00Z_summary'
+    },
+    {
+        "configs": aifs_configs,
+        "grib_folder": 'ecmwf/aifs00Z',
+        "summary_folder": 'ecmwf/aifs00Z_summary',
+        "ostore_grib_folder": 'ecmwf/aifs00Z',
+        "ostore_summary_folder": 'ecmwf/aifs00Z_summary'
+    },
+    {
+        "configs": gfs_configs,
+        "grib_folder": 'NWP/gfs00Z',
+        "summary_folder": 'NWP/gfs00Z_summary',
+        "ostore_grib_folder": 'NWP/gfs00Z',
+        "ostore_summary_folder": 'NWP/gfs00Z_summary'
+    }]
+
+    for date_str in dates:
+        for params in model_download_params:
+            check_ostore = GetGrib.CopyCMC2ObjectStorage(date_str)
+            check_folder = os.path.join(params["ostore_summary_folder"], date_str)
+            obj_summary_list = check_ostore.check_ostore(check_folder)
+            if not obj_summary_list:
+                LOGGER.info(f"no summary found in ostore for {check_folder}, downloading and persisting to ostore")
+                get_extract_gribs(date_str=date_str,
+                                GribConfigList=params["configs"],
+                                grib_folder=params["grib_folder"],
+                                summary_folder=params["summary_folder"])
+                persist_gribs_to_object_store(date_str=date_str,
+                                            grib_folder=params["grib_folder"],
+                                            summary_folder=params["summary_folder"],
+                                            ostore_grib_folder=params["ostore_grib_folder"],
+                                            ostore_summary_folder=params["ostore_summary_folder"])

@@ -318,8 +318,7 @@ class CopyCMC2ObjectStorage:
         # copy tmp/gribs/<date> to ostore
         src_files = os.listdir(src_folder)
 
-        ostore_objects = self.objstor.listObjects(ostore_folder, recursive=True, returnFileNamesOnly=True)
-        ostore_objects = [os.path.basename(ostore_file) for ostore_file in ostore_objects]
+        ostore_objects = self.check_ostore(ostore_folder)
 
         LOGGER.info(f"found {len(ostore_objects)} in the ostore folder: {ostore_folder}")
         job_list = []
@@ -334,6 +333,11 @@ class CopyCMC2ObjectStorage:
         # waiting for the queue to close
         pool.close()
         pool.join()
+
+    def check_ostore(self, ostore_folder):
+        ostore_objects = self.objstor.listObjects(ostore_folder, recursive=True, returnFileNamesOnly=True)
+        ostore_objects = [os.path.basename(ostore_file) for ostore_file in ostore_objects]
+        return ostore_objects
 
 
 if __name__ == '__main__':
