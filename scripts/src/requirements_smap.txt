@@ -1,4 +1,4 @@
-earthaccess==0.18.0
+earthaccess
 h5netcdf==1.8.1
 h5py==3.16.0
 rioxarray==0.23.0
