@@ -25,6 +25,8 @@ jobs:
       OBJ_STORE_SECRET: ${{ secrets.OBJ_STORE_SECRET }}
       OBJ_STORE_USER: ${{ secrets.OBJ_STORE_USER }}
       OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
+      EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
+      EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
 
     steps:
     - uses: actions/checkout@v6
