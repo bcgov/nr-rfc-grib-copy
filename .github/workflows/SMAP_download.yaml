@@ -46,6 +46,9 @@ jobs:
         pip install -r scripts/requirements.txt
         pip install -r scripts/src/requirements_smap.txt
 
+    - name: Test Internet Connectivity
+      run: curl -I https://urs.earthdata.nasa.gov
+
     - id: SMAP_download
       name: Download SMAP data
       shell: bash
