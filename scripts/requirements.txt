@@ -1,9 +1,9 @@
 requests==2.31.0
-boto3==1.27.0
-pytz==2023.3
-minio==7.1.15
-beautifulsoup4==4.12.2
-ecmwf-opendata==0.3.14
+boto3==1.43.82
+pytz==2023.4
+minio==7.2.20
+beautifulsoup4==4.15.0
+ecmwf-opendata==0.3.34
 pandas==2.2.2
 openpyxl==3.1.5
 PyJWT==2.12.1
