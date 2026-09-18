@@ -9,6 +9,15 @@ on:
   # schedule:
   #   - cron: '00 14 * * *'
   workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start Date (Format: YYYYMMDD). Leave blank for today.'
+        required: false
+        default: ''
+      end_date:
+        description: 'End Date (Format: YYYYMMDD). Leave blank for today.'
+        required: false
+        default: ''
   repository_dispatch:
     types: run-smap-download
 
@@ -53,4 +62,4 @@ jobs:
       name: Download SMAP data
       shell: bash
       run: |
-        python scripts/src/main_SMAP.py
+        python scripts/src/main_SMAP.py ${{ github.event.inputs.start_date }} ${{ github.event.inputs.end_date }}

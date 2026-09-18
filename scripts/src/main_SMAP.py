@@ -1,10 +1,12 @@
 import os
+import sys
 import earthaccess
 import xarray as xr
 import rioxarray
 #from rasterio.transform import from_bounds
 import h5netcdf
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
+import gc
 
 #import h5py
 
@@ -19,10 +21,16 @@ lon_min, lat_min, lon_max, lat_max = -140, 48, -114, 60
 # Define the variables you want to extract
 target_variables = ["sm_surface", "sm_rootzone", "surface_temp"]
 
+start_date = "2025-07-09"
+end_date = "2025-07-10"
+if len(sys.argv) > 1:
+        start_date = sys.argv[1]
+if len(sys.argv) > 2:
+        end_date = sys.argv[2]
 # 1. Search for 19Z granules
 results = earthaccess.search_data(
     short_name="SPL4SMGP",
-    temporal=("2026-01-01", "2026-08-20"),
+    temporal=(start_date, end_date),
     bounding_box=(lon_min, lat_min, lon_max, lat_max),
     granule_name="*T19*"
 )
@@ -51,7 +59,7 @@ for i, f_stream in enumerate(file_streams):
     print(f"Processing in-memory: {granule_name}")
 
     # 4. Read the corresponding grid coordinate pairs to geolocate the pixels
-    with xr.open_dataset(f_stream, engine="h5netcdf") as ds_coords:
+    with xr.open_dataset(f_stream, engine="h5netcdf", phony_dims='access') as ds_coords:
         # 1. Grab the coordinates from the root level
         native_x = ds_coords["x"].load().values
         native_y = ds_coords["y"].load().values
@@ -62,7 +70,7 @@ for i, f_stream in enumerate(file_streams):
         output_tif = f"./smap_tiffs/{filename}"
 
         #da = raw_data[var_name]
-        with xr.open_dataset(f_stream, group="Geophysical_Data", engine="h5netcdf") as ds:
+        with xr.open_dataset(f_stream, group="Geophysical_Data", engine="h5netcdf", phony_dims='access') as ds:
             da = ds[var_name].load()
         da = xr.DataArray(
                  data=da.values,
@@ -77,24 +85,28 @@ for i, f_stream in enumerate(file_streams):
         #da = da.rio.write_transform(transform)
         da = da.rio.set_spatial_dims("x", "y")
 
-        # 4. Reproject the matrix safely into standard WGS84 Geographic coordinates
-        da_4326 = da.rio.reproject("EPSG:4326")
-
         # Subset (clip) the array down exclusively to your bounding box limits
-        subset = da_4326.rio.clip_box(
+        subset = da.rio.clip_box(
             minx=lon_min,
             miny=lat_min,
             maxx=lon_max,
-            maxy=lat_max
+            maxy=lat_max,
+            crs = "EPSG:4326"
         )
 
+        # 4. Reproject the matrix safely into standard WGS84 Geographic coordinates
+        subset_4326 = subset.rio.reproject("EPSG:4326")
+
         # 6. Save the final processed raster directly to disk
-        subset.rio.to_raster(output_tif)
-        da.rio.to_raster(f"./smap_tiffs/test.tif")
+        subset_4326.rio.to_raster(output_tif)
+        #da.rio.to_raster(f"./smap_tiffs/test.tif")
         obj_path = os.path.join(ostore_path,filename)
         if obj_path not in ostore_objs:
             ostore.put_object(local_path=output_tif, ostore_path=obj_path)
             os.remove(output_tif)
         print(f" -> Saved: {output_tif}")
+
+        del da, subset_4326, subset
+        gc.collect()
 
 print("Processing complete! Raw HDF5 files were never saved to disk.")
