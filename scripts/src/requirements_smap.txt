@@ -3,3 +3,4 @@ h5netcdf
 h5py
 rioxarray
 nr_objstore_util==0.11.0
+psutil
