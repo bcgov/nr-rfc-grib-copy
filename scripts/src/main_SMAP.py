@@ -7,8 +7,22 @@ import rioxarray
 import h5netcdf
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
 import gc
+import psutil
 
 #import h5py
+def print_memory_diagnostics(label=""):
+    """Prints current Python process memory and system-wide available RAM."""
+    process = psutil.Process(os.getpid())
+    process_ram = process.memory_info().rss / (1024 ** 3)  # Convert to GB
+
+    sys_mem = psutil.virtual_memory()
+    sys_available = sys_mem.available / (1024 ** 3)       # Convert to GB
+    sys_percent = sys_mem.percent
+
+    print(f"--- [RAM DIAGNOSTIC - {label}] ---")
+    print(f"    Script RAM usage: {process_ram:.3f} GB")
+    print(f"    System RAM Free : {sys_available:.3f} GB ({sys_percent}% Used)")
+    print("---------------------------------")
 
 # Authenticate with NASA Earthdata
 auth = earthaccess.login(strategy="environment")
@@ -21,8 +35,8 @@ lon_min, lat_min, lon_max, lat_max = -140, 48, -114, 60
 # Define the variables you want to extract
 target_variables = ["sm_surface", "sm_rootzone", "surface_temp"]
 
-start_date = "2025-08-26"
-end_date = "2025-08-31"
+start_date = "2024-05-08"
+end_date = "2024-05-10"
 if len(sys.argv) > 1:
         start_date = sys.argv[1]
 if len(sys.argv) > 2:
@@ -46,6 +60,8 @@ os.makedirs("./smap_tiffs", exist_ok=True)
 ostore_path = 'RFC_DATA/SMAP/'
 ostore = NRObjStoreUtil.ObjectStoreUtil()
 ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
+
+print_memory_diagnostics("SCRIPT START")
 
 for i, f_stream in enumerate(file_streams):
     granule_name = os.path.basename(f_stream.path)
@@ -122,5 +138,6 @@ for i, f_stream in enumerate(file_streams):
     # Explicitly clear file-level references and flush memory back to the OS
     del native_x, native_y
     gc.collect()
+    print_memory_diagnostics(f"FINISHED FILE [{i}]")
 
 print("Processing complete! Raw HDF5 files were never saved to disk.")
