@@ -21,8 +21,8 @@ lon_min, lat_min, lon_max, lat_max = -140, 48, -114, 60
 # Define the variables you want to extract
 target_variables = ["sm_surface", "sm_rootzone", "surface_temp"]
 
-start_date = "2025-07-09"
-end_date = "2025-07-10"
+start_date = "2025-08-26"
+end_date = "2025-08-31"
 if len(sys.argv) > 1:
         start_date = sys.argv[1]
 if len(sys.argv) > 2:
@@ -48,65 +48,79 @@ ostore = NRObjStoreUtil.ObjectStoreUtil()
 ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
 
 for i, f_stream in enumerate(file_streams):
-    # Extract filename information for the output
     granule_name = os.path.basename(f_stream.path)
     base_name = granule_name.split(".")[0]
     extension = granule_name.split(".")[-1]
+
     if extension != "h5":
         print(f"Skipping non-HDF5 file: {granule_name}")
         continue
 
     print(f"Processing in-memory: {granule_name}")
 
-    # 4. Read the corresponding grid coordinate pairs to geolocate the pixels
-    with xr.open_dataset(f_stream, engine="h5netcdf", phony_dims='access') as ds_coords:
-        # 1. Grab the coordinates from the root level
-        native_x = ds_coords["x"].load().values
-        native_y = ds_coords["y"].load().values
+    try:
+        # 1. Open the root for coordinates and the Geophysical group TOGETHER
+        # Using a single context manager stops memory leaks from streaming data
+        with xr.open_dataset(f_stream, engine="h5netcdf", phony_dims='access') as ds_coords, \
+             xr.open_dataset(f_stream, group="Geophysical_Data", engine="h5netcdf", phony_dims='access') as ds_data:
 
-    # 4. Loop through each variable to process and save them separately
-    for var_name in target_variables:
-        filename = f"{base_name}_{var_name}.tif"
-        output_tif = f"./smap_tiffs/{filename}"
+            # Load coordinates once per file
+            native_x = ds_coords["x"].values
+            native_y = ds_coords["y"].values
 
-        #da = raw_data[var_name]
-        with xr.open_dataset(f_stream, group="Geophysical_Data", engine="h5netcdf", phony_dims='access') as ds:
-            da = ds[var_name].load()
-        da = xr.DataArray(
-                 data=da.values,
-                 dims=["y", "x"],
-                 coords={"x": native_x, "y": native_y}
-             )
-        #ny, nx = da.shape
-        #transform = from_bounds(xmin, ymin, xmax, ymax, nx, ny)
+            # 2. Loop through your target variables using the already open dataset
+            for var_name in target_variables:
+                if var_name not in ds_data:
+                    print(f" -> Variable {var_name} not found in {granule_name}")
+                    continue
 
-        # 5. Georeference, Crop, and Reproject into EPSG:4326 using rioxarray
-        da = da.rio.write_crs("EPSG:6933")
-        #da = da.rio.write_transform(transform)
-        da = da.rio.set_spatial_dims("x", "y")
+                filename = f"{base_name}_{var_name}.tif"
+                output_tif = f"./smap_tiffs/{filename}"
+                obj_path = os.path.join(ostore_path, filename)
 
-        # Subset (clip) the array down exclusively to your bounding box limits
-        subset = da.rio.clip_box(
-            minx=lon_min,
-            miny=lat_min,
-            maxx=lon_max,
-            maxy=lat_max,
-            crs = "EPSG:4326"
-        )
+                # OPTIMIZATION: Skip processing entirely if it already exists in object storage
+                if obj_path in ostore_objs:
+                    print(f" -> Skipping (already in ostore): {filename}")
+                    continue
 
-        # 4. Reproject the matrix safely into standard WGS84 Geographic coordinates
-        subset_4326 = subset.rio.reproject("EPSG:4326")
+                # Pull out just the array data values directly (saves RAM over .load())
+                da_val = ds_data[var_name].values
 
-        # 6. Save the final processed raster directly to disk
-        subset_4326.rio.to_raster(output_tif)
-        #da.rio.to_raster(f"./smap_tiffs/test.tif")
-        obj_path = os.path.join(ostore_path,filename)
-        if obj_path not in ostore_objs:
-            ostore.put_object(local_path=output_tif, ostore_path=obj_path)
-            os.remove(output_tif)
-        print(f" -> Saved: {output_tif}")
+                da = xr.DataArray(
+                    data=da_val,
+                    dims=["y", "x"],
+                    coords={"x": native_x, "y": native_y}
+                )
 
-        del da, subset_4326, subset
-        gc.collect()
+                # 3. Spatial operations using rioxarray
+                da = da.rio.write_crs("EPSG:6933")
+                da = da.rio.set_spatial_dims("x", "y")
+
+                # Subset (clip) to your bounding box
+                subset = da.rio.clip_box(
+                    minx=lon_min,
+                    miny=lat_min,
+                    maxx=lon_max,
+                    maxy=lat_max,
+                    crs="EPSG:4326"
+                )
+
+                # Reproject and save
+                subset_4326 = subset.rio.reproject("EPSG:4326")
+                subset_4326.rio.to_raster(output_tif)
+
+                # 4. Upload to Object Store and clean up file
+                ostore.put_object(local_path=output_tif, ostore_path=obj_path)
+                if os.path.exists(output_tif):
+                    os.remove(output_tif)
+
+                print(f" -> Saved & Uploaded: {filename}")
+
+    except Exception as e:
+        print(f"Error processing file {granule_name}: {e}")
+
+    # Explicitly clear file-level references and flush memory back to the OS
+    del native_x, native_y
+    gc.collect()
 
 print("Processing complete! Raw HDF5 files were never saved to disk.")
