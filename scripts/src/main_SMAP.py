@@ -1,4 +1,5 @@
-import multiprocessing
+import datetime
+import pandas as pd
 import os
 import sys
 import earthaccess
@@ -9,8 +10,21 @@ import h5netcdf
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
 import gc
 import psutil
+import geopandas as gpd
+import io
+import zipfile
+import requests
+from exactextract import exact_extract
+import re
 
-#import h5py
+ostore_path = 'RFC_DATA/SMAP/'
+ostore = NRObjStoreUtil.ObjectStoreUtil()
+ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
+# Ensure our local processing directory exists
+local_dir = "./temp_smap"
+os.makedirs(local_dir, exist_ok=True)
+os.makedirs("./smap_tiffs", exist_ok=True)
+
 def print_memory_diagnostics(label=""):
     """Prints current Python process memory and system-wide available RAM."""
     process = psutil.Process(os.getpid())
@@ -25,7 +39,59 @@ def print_memory_diagnostics(label=""):
     print(f"    System RAM Free : {sys_available:.3f} GB ({sys_percent}% Used)")
     print("---------------------------------")
 
-# Authenticate with NASA Earthdata
+def parse_date_from_key(key):
+    """Extracts date from S3 object key (e.g., 'folder/2026_09_22_sm_surface.tif')"""
+    filename = os.path.basename(key)
+    match = re.search(r'_\d{8}T', filename)
+    if not match:
+        return None
+    return datetime.datetime.strptime(match.group(), "_%Y%m%dT").date()
+
+def process_s3_raster(local_path, file_date):
+    id_col = "BasinName"
+    stats = exact_extract(local_path, gdf, ['mean'], include_cols=[id_col])
+
+    # Format into a clean DataFrame
+    df = pd.DataFrame(stats)
+    df_flat = pd.json_normalize(df['properties'])
+
+    df_flat.rename(columns={'mean': 'sm_surface_mean', id_col: 'basin_id'}, inplace=True)
+    df_flat['date'] = file_date
+
+    return df_flat[['date', 'basin_id', 'sm_surface_mean']]
+
+
+def load_drought_boundaries():
+    """
+    Downloads and loads the BC drought basin boundaries shapefile into a GeoDataFrame.
+    Returns:
+        gdf (GeoDataFrame): The loaded drought basin boundaries.
+    """
+    # The direct download URL you provided
+    url = "https://catalogue.data.gov.bc.ca/dataset/c4f3c7dd-d30e-42a3-a73d-373e72d6a906/resource/4df74124-baae-4040-9469-ff57aac54e37/download/bc_drought_basin_boundaries.zip"
+
+    print("Downloading drought boundaries...")
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        # Read the zipped bytes directly into Geopandas without saving to disk
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            # Geopandas can read directly from a zip file buffer using the zip:// syntax
+            gdf = gpd.read_file(io.BytesIO(response.content))
+
+        print("Success! Data loaded into GeoDataFrame.")
+
+        # 1. Load Polygons & Match Raster CRS (EPSG:4326)
+        # Replace 'bc_drought_basin_boundaries.zip' with your source file path
+        gdf = gdf.to_crs(epsg=4326)
+
+        print(gdf.head())  # Inspect the first few rows
+        return gdf
+    else:
+        print(f"Failed to download file. Status code: {response.status_code}")
+        return None
+
+ # Authenticate with NASA Earthdata
 auth = earthaccess.login(strategy="environment")
 
 # Define your target bounding box coordinates for cropping
@@ -36,8 +102,11 @@ lon_min, lat_min, lon_max, lat_max = -140, 48, -114, 60
 # Define the variables you want to extract
 target_variables = ["sm_surface", "sm_rootzone", "surface_temp"]
 
-start_date = "2024-08-08"
-end_date = "2024-08-14"
+current_date = datetime.datetime.now()
+start_date = (current_date - datetime.timedelta(days=5)).strftime('%Y-%m-%d')
+end_date = current_date.strftime('%Y-%m-%d')
+#start_date = "2024-08-08"
+#end_date = "2024-08-14"
 if len(sys.argv) > 1:
         start_date = sys.argv[1]
 if len(sys.argv) > 2:
@@ -56,115 +125,10 @@ print(f"Found {len(results)} files to stream.")
 # earthaccess.open returns python file-like objects pointing directly to the cloud
 file_streams = earthaccess.open(results, provider="NSIDC_ECS")
 
-os.makedirs("./smap_tiffs", exist_ok=True)
-local_dir = "./temp_smap"
-os.makedirs(local_dir, exist_ok=True)
-
-ostore_path = 'RFC_DATA/SMAP/'
-ostore = NRObjStoreUtil.ObjectStoreUtil()
-ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
 
 print_memory_diagnostics("SCRIPT START")
 
-
-def process_single_file(f_stream, i):
-    granule_name = os.path.basename(f_stream.path)
-    base_name = granule_name.split(".")[0]
-    extension = granule_name.split(".")[-1]
-
-    if extension != "h5":
-        print(f"Skipping non-HDF5 file: {granule_name}")
-        return
-
-    print(f"Processing in-memory: {granule_name}")
-
-    try:
-        # 1. Open the root for coordinates and the Geophysical group TOGETHER
-        # Using a single context manager stops memory leaks from streaming data
-        with xr.open_dataset(f_stream, engine="h5netcdf", phony_dims='access') as ds_coords, \
-                xr.open_dataset(f_stream, group="Geophysical_Data", engine="h5netcdf", phony_dims='access') as ds_data:
-
-            # Load coordinates once per file
-            native_x = ds_coords["x"].values
-            native_y = ds_coords["y"].values
-
-            # 2. Loop through your target variables using the already open dataset
-            for var_name in target_variables:
-                if var_name not in ds_data:
-                    print(f" -> Variable {var_name} not found in {granule_name}")
-                    continue
-
-                filename = f"{base_name}_{var_name}.tif"
-                output_tif = f"./smap_tiffs/{filename}"
-                obj_path = os.path.join(ostore_path, filename)
-
-                # OPTIMIZATION: Skip processing entirely if it already exists in object storage
-                if obj_path in ostore_objs:
-                    print(f" -> Skipping (already in ostore): {filename}")
-                    continue
-
-                # Pull out just the array data values directly (saves RAM over .load())
-                da_val = ds_data[var_name].values
-
-                da = xr.DataArray(
-                    data=da_val,
-                    dims=["y", "x"],
-                    coords={"x": native_x, "y": native_y}
-                )
-
-                # 3. Spatial operations using rioxarray
-                da = da.rio.write_crs("EPSG:6933")
-                da = da.rio.set_spatial_dims("x", "y")
-
-                # Subset (clip) to your bounding box
-                subset = da.rio.clip_box(
-                    minx=lon_min,
-                    miny=lat_min,
-                    maxx=lon_max,
-                    maxy=lat_max,
-                    crs="EPSG:4326"
-                )
-
-                # Reproject and save
-                subset_4326 = subset.rio.reproject("EPSG:4326")
-                subset_4326.rio.to_raster(output_tif)
-
-                # 4. Upload to Object Store and clean up file
-                ostore.put_object(local_path=output_tif, ostore_path=obj_path)
-                if os.path.exists(output_tif):
-                    os.remove(output_tif)
-
-                print(f" -> Saved & Uploaded: {filename}")
-
-    except Exception as e:
-        print(f"Error processing file {granule_name}: {e}")
-
-    # === FORCE MEMORY FLUSH & DEEP CACHE RESET ===
-    # 1. Clear any local data variables
-    if 'native_x' in locals(): del native_x
-    if 'native_y' in locals(): del native_y
-
-    # 2. Reset rioxarray/rasterio's underlying GDAL state cache
-    try:
-        # Destroys the persistent thread-local cache built up by spatial operations
-        rioxarray._io.clean_spatial_dims()
-    except:
-        pass
-
-    # 3. Force Close Xarray Backend caching managers
-    try:
-        xr.backends.file_manager.FILE_CACHE.clear()
-    except:
-        pass
-    gc.collect()
-    print_memory_diagnostics(f"FINISHED FILE [{i}]")
-
-
-# Ensure our local processing directory exists
-local_dir = "./temp_smap"
-os.makedirs(local_dir, exist_ok=True)
-os.makedirs("./smap_tiffs", exist_ok=True)
-
+gdf = load_drought_boundaries()
 # Loop through the raw results list instead of streaming
 for idx, granule in enumerate(results):
     print(f"\n==================================================")
@@ -269,3 +233,81 @@ for idx, granule in enumerate(results):
 
 
 print("Processing complete! Raw HDF5 files were never saved to disk.")
+
+
+
+# --- CONFIGURATION ---
+BUCKET_NAME = "rfcdata"
+PREFIX = "RFC_DATA/SMAP/"  # The folder containing the variables
+MASTER_FILE = "drought_sm_surface_summary.parquet"
+
+# Initialize Cloud Storage Client (Configure environment variables for credentials)
+#s3_client = ostore.createBotoClient()
+
+
+
+# --- STEP 1: HISTORICAL BACKFILL & OPERATIONAL STREAMING ---
+ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
+
+# Filter targets ending in 'sm_surface.tif' (or variations like 'sm_surface')
+target_keys = []
+for key in ostore_objs:
+    if key.endswith('sm_surface.tif') or 'sm_surface' in key.lower():
+        target_keys.append(key)
+
+print(f"Found {len(target_keys)} relevant 'sm_surface' files.")
+
+# Load existing tracking data to avoid re-processing files during daily runs
+processed_dates = set()
+objstore_summary = [key for key in ostore_objs if MASTER_FILE in key]
+local_summary_path = os.path.join(local_dir, MASTER_FILE)
+if objstore_summary:
+    print(f"Found existing summary file in object store: {objstore_summary[0]}")
+    # Download the existing summary file to local disk for processing
+    ostore.get_object(local_path=local_summary_path, file_path=objstore_summary[0])
+if os.path.exists(local_summary_path):
+    existing_df = pd.read_parquet(local_summary_path)
+    processed_dates = set(existing_df['date'].unique())
+
+# Process and append data loop
+new_records = []
+for key in sorted(target_keys):
+    file_date = parse_date_from_key(key)
+    if file_date in processed_dates:
+        continue  # Skip files we have already processed historically
+
+    # Generate temporary local filepath
+    local_filename = f"temp_{file_date}_sm_surface.tif"
+    local_path = os.path.join(local_dir, local_filename)
+    print(f"Processing cloud raster for date: {file_date}...")
+    try:
+        ostore.get_object(local_path=local_path, file_path=key)
+        df_day = process_s3_raster(local_path, file_date)
+        if df_day is not None:
+            new_records.append(df_day)
+    except Exception as e:
+        print(f"Failed processing {key}: {e}")
+    finally:
+        # CRITICAL: Clean up the local disk space immediately after processing
+        if os.path.exists(local_path):
+            os.remove(local_path)
+
+# Append any newly found data to the master Parquet file
+if new_records:
+    df_new_all = pd.concat(new_records, ignore_index=True)
+    if os.path.exists(local_summary_path):
+        df_final = pd.concat([existing_df, df_new_all], ignore_index=True)
+    else:
+        df_final = df_new_all
+
+    df_final.to_parquet(local_summary_path, index=False)
+    # Upload the updated summary back to object storage
+    ostore.put_object(local_path=local_summary_path, ostore_path=os.path.join(ostore_path, MASTER_FILE))
+    print(f"Saved update to {MASTER_FILE}")
+else:
+    ostore.put_object(local_path=local_summary_path, ostore_path=os.path.join(ostore_path, MASTER_FILE))
+    print("Database is completely up to date. No new files found.")
+
+
+
+
