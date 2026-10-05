@@ -6,3 +6,4 @@ nr_objstore_util==0.11.0
 psutil
 geopandas
 exactextract
+pyarrow
