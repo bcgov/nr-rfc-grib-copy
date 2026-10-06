@@ -67,31 +67,41 @@ def load_drought_boundaries():
     Returns:
         gdf (GeoDataFrame): The loaded drought basin boundaries.
     """
+    clever_shp_path = 'data/shape/Drought/BC_Drought_Basins.shp'
+    gdf = gpd.read_file(clever_shp_path)
+    gdf = gdf.rename(columns={'BasinNm': 'BasinName'})
+    return gdf.to_crs(epsg=4326)
+    """
     # The direct download URL you provided
-    url = "https://catalogue.data.gov.bc.ca/dataset/c4f3c7dd-d30e-42a3-a73d-373e72d6a906/resource/4df74124-baae-4040-9469-ff57aac54e37/download/bc_drought_basin_boundaries.zip"
+        url = "https://catalogue.data.gov.bc.ca/dataset/c4f3c7dd-d30e-42a3-a73d-373e72d6a906/resource/4df74124-baae-4040-9469-ff57aac54e37/download/bc_drought_basin_boundaries.zip"
 
-    print("Downloading drought boundaries...")
-    response = requests.get(url)
+        print("Downloading drought boundaries...")
+        response = requests.get(url)
 
-    if response.status_code == 200:
-        # Read the zipped bytes directly into Geopandas without saving to disk
-        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-            # Geopandas can read directly from a zip file buffer using the zip:// syntax
-            gdf = gpd.read_file(io.BytesIO(response.content))
+        if response.status_code == 200:
+            # Read the zipped bytes directly into Geopandas without saving to disk
+            with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+                # Geopandas can read directly from a zip file buffer using the zip:// syntax
+                gdf = gpd.read_file(io.BytesIO(response.content))
 
-        print("Success! Data loaded into GeoDataFrame.")
+            print("Success! Data loaded into GeoDataFrame.")
 
-        # 1. Load Polygons & Match Raster CRS (EPSG:4326)
-        # Replace 'bc_drought_basin_boundaries.zip' with your source file path
-        gdf = gdf.to_crs(epsg=4326)
+            # 1. Load Polygons & Match Raster CRS (EPSG:4326)
+            # Replace 'bc_drought_basin_boundaries.zip' with your source file path
+            gdf = gdf.to_crs(epsg=4326)
 
-        print(gdf.head())  # Inspect the first few rows
-        return gdf
-    else:
-        print(f"Failed to download file. Status code: {response.status_code}")
-        return None
+            print(gdf.head())  # Inspect the first few rows
+            return gdf
+        else:
+            print(f"Failed to download file. Status code: {response.status_code}")
+            return None
+    """
 
- # Authenticate with NASA Earthdata
+
+gdf = load_drought_boundaries()
+
+
+# Authenticate with NASA Earthdata
 auth = earthaccess.login(strategy="environment")
 
 # Define your target bounding box coordinates for cropping
@@ -128,7 +138,6 @@ file_streams = earthaccess.open(results, provider="NSIDC_ECS")
 
 print_memory_diagnostics("SCRIPT START")
 
-gdf = load_drought_boundaries()
 # Loop through the raw results list instead of streaming
 for idx, granule in enumerate(results):
     print(f"\n==================================================")
@@ -244,15 +253,13 @@ MASTER_FILE = "drought_sm_surface_summary.parquet"
 # Initialize Cloud Storage Client (Configure environment variables for credentials)
 #s3_client = ostore.createBotoClient()
 
-
-
 # --- STEP 1: HISTORICAL BACKFILL & OPERATIONAL STREAMING ---
 ostore_objs = ostore.list_objects(ostore_path,return_file_names_only=True)
 
 # Filter targets ending in 'sm_surface.tif' (or variations like 'sm_surface')
 target_keys = []
 for key in ostore_objs:
-    if key.endswith('sm_surface.tif') or 'sm_surface' in key.lower():
+    if key.endswith('sm_surface.tif'):
         target_keys.append(key)
 
 print(f"Found {len(target_keys)} relevant 'sm_surface' files.")
