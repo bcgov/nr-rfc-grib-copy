@@ -124,27 +124,26 @@ def compute_mean_bias(forecast_data, obs_data, var, forecast_days, days_back):
 
     return mean_bias
 
-def forecast_daily_summary(grib_path, datelist, config_list_T, config_list_P, daily_summary_path, col_names):
+def forecast_daily_summary(grib_path, date, config_list_T, config_list_P, daily_summary_path, col_names):
     model_name = config_list_P[0].model_name
-    for dt in datelist:
-        for_PC = read_forecast(date=dt,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
-        for_TA = read_forecast(date=dt,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
-        for_TA = split_duplicates(for_TA)
-        #Precipitation computed 1am-1am in Excel, midnight to midnight here:
-        PC_daily = for_PC.groupby(pd.Grouper(axis=0, freq = 'D')).sum()
-        TX_daily = for_TA.groupby(pd.Grouper(axis=0, freq = 'D')).max()
-        #TMin computed between 10 am previous day and 7 am.
-        #Shift datetime index by 2 hours and compute Tmin between 00:00 and 09:00, equivalent to 10pm - 7am for the unshifted index:
-        for_TA.index = for_TA.index + pd.Timedelta('2h')
-        TN_daily = for_TA.between_time('00:00','9:00').groupby(pd.Grouper(axis=0, freq = 'D')).min()
-        All_daily = pd.concat([TX_daily,TN_daily,PC_daily],keys = ['TX','TN','PC'])
-        day = dt.replace(hour=0,minute=0,second=0,microsecond=0)
-        All_daily = All_daily.loc[All_daily.index.get_level_values(1)>=day,:].round(2)
-        All_daily.index = All_daily.index.set_names(['Variable','Date'])
-        daily_summary_fpath = os.path.join(daily_summary_path,dt.strftime("%Y%m%d.csv"))
-        df_to_objstore(All_daily,daily_summary_fpath)
+    for_PC = read_forecast(date=date,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
+    for_TA = read_forecast(date=date,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
+    for_TA = split_duplicates(for_TA)
+    #Precipitation computed 1am-1am in Excel, midnight to midnight here:
+    PC_daily = for_PC.groupby(pd.Grouper(axis=0, freq = 'D')).sum()
+    TX_daily = for_TA.groupby(pd.Grouper(axis=0, freq = 'D')).max()
+    #TMin computed between 10 am previous day and 7 am.
+    #Shift datetime index by 2 hours and compute Tmin between 00:00 and 09:00, equivalent to 10pm - 7am for the unshifted index:
+    for_TA.index = for_TA.index + pd.Timedelta('2h')
+    TN_daily = for_TA.between_time('00:00','9:00').groupby(pd.Grouper(axis=0, freq = 'D')).min()
+    All_daily = pd.concat([TX_daily,TN_daily,PC_daily],keys = ['TX','TN','PC'])
+    day = date.replace(hour=0,minute=0,second=0,microsecond=0)
+    All_daily = All_daily.loc[All_daily.index.get_level_values(1)>=day,:].round(2)
+    All_daily.index = All_daily.index.set_names(['Variable','Date'])
+    daily_summary_fpath = os.path.join(daily_summary_path,date.strftime("%Y%m%d.csv"))
+    df_to_objstore(All_daily,daily_summary_fpath)
 
-def forecast_daily_formatted(daily_summary_path, output_path):
+def forecast_daily_formatted(date, daily_summary_path, output_path):
     daily_summary_fpath = os.path.join(daily_summary_path,date.strftime("%Y%m%d.csv"))
     daily_summary = objstore_to_df(daily_summary_fpath)
     value_cols = daily_summary.columns[2:]
@@ -172,9 +171,7 @@ def forecast_daily_formatted(daily_summary_path, output_path):
 
 
 def forecast_hourly_formatted(grib_path, date, config_list_T, config_list_P, output_path, col_names, dT):
-    today = datetime.date.today()
-    start_time = datetime.time.min
-    start_dt = datetime.datetime.combine(today, start_time)
+    start_dt = date.replace(hour=0,minute=0,second=0,microsecond=0)
     end_dt = start_dt + datetime.timedelta(days=10) - datetime.timedelta(hours=1)
 
     model_name = config_list_P[0].model_name
@@ -316,9 +313,11 @@ def generate_token(role="web_user"):
 ostore = NRObjStoreUtil.ObjectStoreUtil()
 max_days_back = 6
 
-date = datetime.datetime.now() - datetime.timedelta(days=0)
-year_list = set(pd.date_range(end=date, periods=max_days_back).strftime("%Y"))
+end_date = datetime.datetime.now() - datetime.timedelta(days=0)
+year_list = set(pd.date_range(end=end_date, periods=max_days_back).strftime("%Y"))
 observed_data = read_climateOBS(year_list)
+JWT_SECRET = os.getenv("JWT_SECRET")
+token = generate_token()
 
 col_names = observed_data.columns
 
@@ -333,19 +332,21 @@ config_IFS_T = [GetGribConfig.GribECMWF1()]
 
 obj_summary_list = ostore.list_objects(ifs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+days_back = min(abs((max(summary_dates) - end_date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+#days_back = 1
 
-datelist = pd.date_range(end=date, periods=days_back).tolist()
-forecast_daily_summary(ifs_grib_path, datelist, config_IFS_T, config_IFS_P, ifs_daily_summary_path, col_names)
-ifs_dT = bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
-#payload = forecast_to_db(ifs_grib_path, date, config_IFS_T, config_IFS_P, col_names, modelname='ifs', dT=ifs_dT)
-forecast_daily_formatted(ifs_daily_corrected_path, ifs_clever_input_path)
-forecast_hourly_formatted(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_clever_input_path, col_names, ifs_dT)
+datelist = pd.date_range(end=end_date, periods=days_back).tolist()
+for date in datelist:
+    print(f"Processing IFS data for date: {date.strftime('%Y-%m-%d')}")
+    forecast_daily_summary(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_daily_summary_path, col_names)
+    ifs_dT = bias_correction(date, observed_data, ifs_daily_summary_path, ifs_daily_corrected_path)
+    payload = forecast_to_db(ifs_grib_path, date, config_IFS_T, config_IFS_P, col_names, modelname='ifs', dT=ifs_dT)
+    forecast_daily_formatted(date, ifs_daily_corrected_path, ifs_clever_input_path)
+    forecast_hourly_formatted(ifs_grib_path, date, config_IFS_T, config_IFS_P, ifs_clever_input_path, col_names, ifs_dT)
 
-# JWT_SECRET = os.getenv("JWT_SECRET")
-# token = generate_token()
-# payload_dict = payload.to_dict(orient='records')
-# post_data(payload_dict, url="https://rfc-db.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
+    print(f"Posting IFS data for date: {date.strftime('%Y-%m-%d')} to database")
+    payload_dict = payload.to_dict(orient='records')
+    post_data(payload_dict, url="https://rfc-db-dev.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
 
 aifs_grib_path = "ecmwf/aifs00Z_summary"
 aifs_daily_summary_path = 'ClimateFOR/ecmwf_aifs00Z/daily_forecast_summary/'
@@ -356,14 +357,19 @@ config_AIFS_T = [GetGribConfig.GribECMWF3()]
 
 obj_summary_list = ostore.list_objects(aifs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+days_back = min(abs((max(summary_dates) - end_date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+datelist = pd.date_range(end=end_date, periods=days_back).tolist()
+for date in datelist:
+    print(f"Processing AIFS data for date: {date.strftime('%Y-%m-%d')}")
+    forecast_daily_summary(aifs_grib_path, date, config_AIFS_T, config_AIFS_P, aifs_daily_summary_path, col_names)
+    aifs_dT = bias_correction(date, observed_data, aifs_daily_summary_path, aifs_daily_corrected_path)
+    payload = forecast_to_db(aifs_grib_path, date, config_AIFS_T, config_AIFS_P, col_names, modelname='aifs', dT=aifs_dT)
+    forecast_daily_formatted(date, aifs_daily_corrected_path, aifs_clever_input_path)
+    forecast_hourly_formatted(aifs_grib_path, date, config_AIFS_T, config_AIFS_P, aifs_clever_input_path, col_names, aifs_dT)
 
-
-datelist = pd.date_range(end=date, periods=days_back).tolist()
-forecast_daily_summary(aifs_grib_path, datelist, config_AIFS_T, config_AIFS_P, aifs_daily_summary_path, col_names)
-aifs_dT = bias_correction(date, observed_data, aifs_daily_summary_path, aifs_daily_corrected_path)
-forecast_daily_formatted(aifs_daily_corrected_path, aifs_clever_input_path)
-forecast_hourly_formatted(aifs_grib_path, date, config_AIFS_T, config_AIFS_P, aifs_clever_input_path, col_names, aifs_dT)
+    print(f"Posting AIFS data for date: {date.strftime('%Y-%m-%d')} to database")
+    payload_dict = payload.to_dict(orient='records')
+    post_data(payload_dict, url="https://rfc-db-dev.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
 
 
 gfs_grib_path = "NWP/gfs00Z_summary"
@@ -375,14 +381,20 @@ config_GFS_T = [GetGribConfig.GribGFS1()]
 
 obj_summary_list = ostore.list_objects(gfs_daily_summary_path ,return_file_names_only=True)
 summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
-days_back = min(abs((max(summary_dates) - date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+days_back = min(abs((max(summary_dates) - end_date).days),max_days_back) if len(summary_dates)>0 else max_days_back
 
+datelist = pd.date_range(end=end_date, periods=days_back).tolist()
+for date in datelist:
+    print(f"Processing GFS data for date: {date.strftime('%Y-%m-%d')}")
+    forecast_daily_summary(gfs_grib_path, date, config_GFS_T, config_GFS_P, gfs_daily_summary_path, col_names)
+    gfs_dT = bias_correction(date, observed_data, gfs_daily_summary_path, gfs_daily_corrected_path)
+    gfs_payload = forecast_to_db(gfs_grib_path, date, config_GFS_T, config_GFS_P, col_names, modelname='gfs', dT=gfs_dT)
+    forecast_daily_formatted(date, gfs_daily_corrected_path, gfs_clever_input_path)
+    forecast_hourly_formatted(gfs_grib_path, date, config_GFS_T, config_GFS_P, gfs_clever_input_path, col_names, gfs_dT)
 
-datelist = pd.date_range(end=date, periods=days_back).tolist()
-forecast_daily_summary(gfs_grib_path, datelist, config_GFS_T, config_GFS_P, gfs_daily_summary_path, col_names)
-gfs_dT = bias_correction(date, observed_data, gfs_daily_summary_path, gfs_daily_corrected_path)
-forecast_daily_formatted(gfs_daily_corrected_path, gfs_clever_input_path)
-forecast_hourly_formatted(gfs_grib_path, date, config_GFS_T, config_GFS_P, gfs_clever_input_path, col_names, gfs_dT)
+    print(f"Posting GFS data for date: {date.strftime('%Y-%m-%d')} to database")
+    payload_dict = gfs_payload.to_dict(orient='records')
+    post_data(payload_dict, url="https://rfc-db-dev.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
 
 #Save daily forecast summaries as csv files
 #Check dates with grib files available vs csv summaries. Produce csv summaries for for all dates with data available
