@@ -25,6 +25,7 @@ jobs:
       OBJ_STORE_SECRET: ${{ secrets.OBJ_STORE_SECRET }}
       OBJ_STORE_USER: ${{ secrets.OBJ_STORE_USER }}
       OBJ_STORE_HOST: ${{ secrets.OBJ_STORE_HOST }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
     steps:
     - uses: actions/checkout@v6
