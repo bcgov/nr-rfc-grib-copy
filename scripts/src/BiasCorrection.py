@@ -301,13 +301,13 @@ def post_data(payload, url, schema, token):
         else:
             print(f"Error {response.status_code}: {response.text}")
 
-def generate_token(role="web_user"):
+def generate_token(role="web_user", jwt_secret=None):
     payload = {
         "role": role,
         "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
         "iat": datetime.datetime.now(datetime.UTC)
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    return jwt.encode(payload, jwt_secret, algorithm="HS256")
 
 
 ostore = NRObjStoreUtil.ObjectStoreUtil()
@@ -317,7 +317,7 @@ end_date = datetime.datetime.now() - datetime.timedelta(days=0)
 year_list = set(pd.date_range(end=end_date, periods=max_days_back).strftime("%Y"))
 observed_data = read_climateOBS(year_list)
 JWT_SECRET = os.getenv("JWT_SECRET")
-token = generate_token()
+token = generate_token(jwt_secret=JWT_SECRET)
 
 col_names = observed_data.columns
 
