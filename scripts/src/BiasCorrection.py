@@ -1,4 +1,5 @@
 import datetime
+import time
 import os
 import NRUtil.NRObjStoreUtil as NRObjStoreUtil
 import pandas as pd
@@ -294,12 +295,37 @@ def post_data(payload, url, schema, token):
     }
     chunk_size = 10000
     chunked_list = [payload[i:i + chunk_size] for i in range(0, len(payload), chunk_size)]
+    # Loop through each chunk of data
     for chunk in chunked_list:
-        response = requests.post(url, json=chunk, headers=headers)
-        if response.status_code == 201:
-            print("Success: Data inserted.")
-        else:
-            print(f"Error {response.status_code}: {response.text}")
+        max_retries = 3
+        delay = 3
+        success = False
+
+        # Retry loop (attempts 0, 1, 2)
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, json=chunk, headers=headers)
+
+                if response.status_code == 201:
+                    print("Success: Data inserted.")
+                    success = True
+                    break  # Exit the retry loop on success
+                elif response.status_code == 200:
+                    print(f"Error {response.status_code}: Unexpected successful status code (Expected 201). Skipping retries.")
+                    break  # Exit retry loop immediately for 200 O
+                else:
+                    print(f"Attempt {attempt + 1} failed with Error {response.status_code}: {response.text}")
+
+            except requests.exceptions.RequestException as e:
+                # Catches network errors, timeouts, etc.
+                print(f"Attempt {attempt + 1} failed with network error: {e}")
+
+            # If it's not the last attempt, wait before retrying
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+
+        if not success:
+            print("Failed to insert chunk after 3 attempts.")
 
 def generate_token(role="web_user", jwt_secret=None):
     payload = {
