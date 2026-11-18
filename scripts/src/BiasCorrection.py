@@ -126,7 +126,7 @@ def compute_mean_bias(forecast_data, obs_data, var, forecast_days, days_back):
     return mean_bias
 
 def forecast_daily_summary(grib_path, date, config_list_T, config_list_P, daily_summary_path, col_names):
-    model_name = config_list_P[0].model_name
+    model_name = getattr(config_list_P[0], 'model_name', '')
     for_PC = read_forecast(date=date,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
     for_TA = read_forecast(date=date,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
     for_TA = split_duplicates(for_TA)
@@ -175,7 +175,7 @@ def forecast_hourly_formatted(grib_path, date, config_list_T, config_list_P, out
     start_dt = date.replace(hour=0,minute=0,second=0,microsecond=0)
     end_dt = start_dt + datetime.timedelta(days=10) - datetime.timedelta(hours=1)
 
-    model_name = config_list_P[0].model_name
+    model_name = getattr(config_list_P[0], 'model_name', '')
     for_PC = read_forecast(date=date,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
     for_TA = read_forecast(date=date,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
     first_dt = for_TA.index[0]
@@ -259,7 +259,7 @@ def forecast_to_db(grib_path, date, config_list_T, config_list_P, col_names, mod
     start_dt = datetime.datetime.combine(today, start_time)
     end_dt = start_dt + datetime.timedelta(days=10) - datetime.timedelta(hours=1)
 
-    model_name = config_list_P[0].model_name
+    model_name = getattr(config_list_P[0], 'model_name', '')
     for_PC = read_forecast(date=date,config_list=config_list_P,grib_path=grib_path, col_names=col_names, model_name=model_name)
     for_TA = read_forecast(date=date,config_list=config_list_T,grib_path=grib_path, col_names=col_names, model_name=model_name)
     first_dt = for_TA.index[0]
@@ -269,6 +269,7 @@ def forecast_to_db(grib_path, date, config_list_T, config_list_P, col_names, mod
     for_TA_hourly = for_TA_hourly.interpolate() + dT
     for_PC = split_duplicates(for_PC)
     for_PC_hourly = for_PC.cumsum().reindex(new_ind)
+    for_PC_hourly.iloc[0] = for_PC_hourly.iloc[0].fillna(0)
     for_PC_hourly = for_PC_hourly.interpolate()
     for_PC_hourly.iloc[1:,:] = for_PC_hourly.diff().iloc[1:,:]
 
@@ -420,6 +421,31 @@ for date in datelist:
 
     print(f"Posting GFS data for date: {date.strftime('%Y-%m-%d')} to database")
     payload_dict = gfs_payload.to_dict(orient='records')
+    post_data(payload_dict, url="https://rfc-db-dev.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
+
+
+cmc_grib_path = "cmc/summary_V2024"
+cmc_daily_summary_path = 'ClimateFOR/cmc/daily_forecast_summary/'
+cmc_daily_corrected_path = 'ClimateFOR/cmc/daily_corrected_summary/'
+cmc_clever_input_path = 'ClimateFOR/cmc/CLEVER_hourly/'
+config_CMC_T = [GetGribConfig.GribRegional_2(),GetGribConfig.GribGlobal_2()]
+config_CMC_P = [GetGribConfig.GribRegional_1(),GetGribConfig.GribGlobal_1()]
+
+obj_summary_list = ostore.list_objects(cmc_daily_summary_path ,return_file_names_only=True)
+summary_dates = [datetime.datetime.strptime(os.path.splitext(os.path.basename(obj))[0], '%Y%m%d') for obj in obj_summary_list]
+days_back = min(abs((max(summary_dates) - end_date).days),max_days_back) if len(summary_dates)>0 else max_days_back
+
+datelist = pd.date_range(end=end_date, periods=days_back).tolist()
+for date in datelist:
+    print(f"Processing CMC data for date: {date.strftime('%Y-%m-%d')}")
+    forecast_daily_summary(cmc_grib_path, date, config_CMC_T, config_CMC_P, cmc_daily_summary_path, col_names)
+    #cmc_dT = bias_correction(date, observed_data, cmc_daily_summary_path, cmc_daily_corrected_path)
+    cmc_payload = forecast_to_db(cmc_grib_path, date, config_CMC_T, config_CMC_P, col_names, modelname='eccc', dT=0)
+    #forecast_daily_formatted(date, cmc_daily_corrected_path, cmc_clever_input_path)
+    #forecast_hourly_formatted(cmc_grib_path, date, config_CMC_T, config_CMC_P, cmc_clever_input_path, col_names, cmc_dT)
+
+    print(f"Posting CMC data for date: {date.strftime('%Y-%m-%d')} to database")
+    payload_dict = cmc_payload.to_dict(orient='records')
     post_data(payload_dict, url="https://rfc-db-dev.apps.silver.devops.gov.bc.ca/nwp_forecast", schema="asp", token=token)
 
 #Save daily forecast summaries as csv files
